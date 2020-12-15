@@ -6,8 +6,8 @@ import (
 )
 
 type Job struct {
-	command string
-	args    []string
+	Command string
+	Args    []string
 }
 
 func Run(w http.ResponseWriter, r *http.Request) {

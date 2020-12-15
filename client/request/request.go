@@ -111,7 +111,40 @@ func Out(c *cli.Context) error {
 	return nil
 }
 
+// Kill terminates a job being handled by the worker library.
 func Kill(c *cli.Context) error {
-	fmt.Println("Kill")
+	if c.NArg() != 1 {
+		return errors.New("No job ID supplied to 'kill' command")
+	}
+	if _, err := strconv.Atoi(c.Args().Get(0)); err != nil {
+		return errors.New("Job ID must be an integer")
+	}
+
+	client := &http.Client{}
+
+	// TODO: Pass job ID as path paramater once API is configured to accept it.
+	req, err := http.NewRequest(
+		http.MethodPut,
+		host+":"+port+"/jobs/kill",
+		nil,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	resp, err := client.Do(req)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(string(body))
+
 	return nil
 }

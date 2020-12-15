@@ -16,8 +16,10 @@ import (
 
 // TODO: Change to 'https' and port 443 once API serves with TLS.
 const (
-	host = "http://localhost"
-	port = "8080"
+	host     = "http://localhost"
+	port     = "8080"
+	username = "default_user"
+	password = "123456"
 )
 
 // Run passes a job to the worker library for execution.
@@ -36,11 +38,21 @@ func Run(c *cli.Context) error {
 		log.Fatal(err)
 	}
 
-	resp, err := http.Post(
+	client := &http.Client{}
+
+	// TODO: Pass job ID as path paramater once API is configured to accept it.
+	req, err := http.NewRequest(
+		http.MethodPost,
 		host+":"+port+"/jobs/run",
-		"application/json",
 		bytes.NewBuffer(requestBody),
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req.SetBasicAuth(username, password)
+
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -66,8 +78,21 @@ func Status(c *cli.Context) error {
 		return errors.New("Job ID must be an integer")
 	}
 
+	client := &http.Client{}
+
 	// TODO: Pass job ID as path paramater once API is configured to accept it.
-	resp, err := http.Get(host + ":" + port + "/jobs/status")
+	req, err := http.NewRequest(
+		http.MethodGet,
+		host+":"+port+"/jobs/status",
+		nil,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req.SetBasicAuth(username, password)
+
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -93,8 +118,21 @@ func Out(c *cli.Context) error {
 		return errors.New("Job ID must be an integer")
 	}
 
+	client := &http.Client{}
+
 	// TODO: Pass job ID as path paramater once API is configured to accept it.
-	resp, err := http.Get(host + ":" + port + "/jobs/out")
+	req, err := http.NewRequest(
+		http.MethodGet,
+		host+":"+port+"/jobs/out",
+		nil,
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req.SetBasicAuth(username, password)
+
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -131,6 +169,8 @@ func Kill(c *cli.Context) error {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	req.SetBasicAuth(username, password)
 
 	resp, err := client.Do(req)
 	if err != nil {

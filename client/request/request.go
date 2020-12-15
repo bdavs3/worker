@@ -84,8 +84,30 @@ func Status(c *cli.Context) error {
 	return nil
 }
 
+// Out queries the output of a job being handled by the worker library.
 func Out(c *cli.Context) error {
-	fmt.Println("Out")
+	if c.NArg() != 1 {
+		return errors.New("No job ID supplied to 'out' command")
+	}
+	if _, err := strconv.Atoi(c.Args().Get(0)); err != nil {
+		return errors.New("Job ID must be an integer")
+	}
+
+	// TODO: Pass job ID as path paramater once API is configured to accept it.
+	resp, err := http.Get(host + ":" + port + "/jobs/out")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(string(body))
+
 	return nil
 }
 

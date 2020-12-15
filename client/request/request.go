@@ -57,7 +57,7 @@ func Run(c *cli.Context) error {
 	return nil
 }
 
-// Status queries the status of job being handled by the worker library.
+// Status queries the status of a job being handled by the worker library.
 func Status(c *cli.Context) error {
 	if c.NArg() != 1 {
 		return errors.New("No job ID supplied to 'status' command")

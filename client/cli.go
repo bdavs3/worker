@@ -23,19 +23,19 @@ func main() {
 			{
 				Name:    "status",
 				Aliases: []string{"s"},
-				Usage:   "get the status of a job by providing its ID.",
+				Usage:   "get the status of a job by providing its ID",
 				Action:  request.Status,
 			},
 			{
 				Name:    "out",
 				Aliases: []string{"o"},
-				Usage:   "get the output of a job by providing its ID.",
+				Usage:   "get the output of a job by providing its ID",
 				Action:  request.Out,
 			},
 			{
 				Name:    "kill",
 				Aliases: []string{"k"},
-				Usage:   "terminate a job by providing its ID.",
+				Usage:   "terminate a job by providing its ID",
 				Action:  request.Kill,
 			},
 		},

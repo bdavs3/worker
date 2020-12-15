@@ -1,18 +1,29 @@
 package main
 
 import (
+	"fmt"
 	"net/http"
+
+	"github.com/gorilla/mux"
 
 	"github.com/bdavs3/worker/server/worker"
 )
 
-const port = "8080"
+const (
+	idRegex = "[1-9][0-9]*"
+	port    = "8080"
+)
 
 func main() {
-	http.HandleFunc("/jobs/run", worker.Run)
-	http.HandleFunc("/jobs/status", worker.Status)
-	http.HandleFunc("/jobs/out", worker.Out)
-	http.HandleFunc("/jobs/kill", worker.Kill)
+	router := mux.NewRouter()
 
+	router.HandleFunc("/jobs/run", worker.Run)
+	router.HandleFunc("/jobs/{id:"+idRegex+"}/status", worker.Status)
+	router.HandleFunc("/jobs/{id:"+idRegex+"}/out", worker.Out)
+	router.HandleFunc("/jobs/{id:"+idRegex+"}/kill", worker.Kill)
+
+	http.Handle("/", router)
+
+	fmt.Println("Listening...")
 	http.ListenAndServe(":"+port, nil)
 }

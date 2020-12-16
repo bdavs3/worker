@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -19,7 +20,7 @@ const (
 	host     = "http://localhost"
 	port     = "8080"
 	username = "default_user"
-	password = "123456"
+	pw       = "123456"
 )
 
 // Run passes a job to the worker library for execution.
@@ -38,21 +39,11 @@ func Run(c *cli.Context) error {
 		log.Fatal(err)
 	}
 
-	client := &http.Client{}
-
-	// TODO: Pass job ID as path paramater once API is configured to accept it.
-	req, err := http.NewRequest(
+	resp, err := makeRequestWithAuth(
 		http.MethodPost,
 		host+":"+port+"/jobs/run",
 		bytes.NewBuffer(requestBody),
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	req.SetBasicAuth(username, password)
-
-	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -78,21 +69,13 @@ func Status(c *cli.Context) error {
 		return errors.New("Job ID must be an integer")
 	}
 
-	client := &http.Client{}
+	jobID := c.Args().Get(0)
 
-	// TODO: Pass job ID as path paramater once API is configured to accept it.
-	req, err := http.NewRequest(
+	resp, err := makeRequestWithAuth(
 		http.MethodGet,
-		host+":"+port+"/jobs/status",
+		host+":"+port+"/jobs/"+jobID+"/status",
 		nil,
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	req.SetBasicAuth(username, password)
-
-	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -118,21 +101,13 @@ func Out(c *cli.Context) error {
 		return errors.New("Job ID must be an integer")
 	}
 
-	client := &http.Client{}
+	jobID := c.Args().Get(0)
 
-	// TODO: Pass job ID as path paramater once API is configured to accept it.
-	req, err := http.NewRequest(
+	resp, err := makeRequestWithAuth(
 		http.MethodGet,
-		host+":"+port+"/jobs/out",
+		host+":"+port+"/jobs/"+jobID+"/out",
 		nil,
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	req.SetBasicAuth(username, password)
-
-	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -158,21 +133,13 @@ func Kill(c *cli.Context) error {
 		return errors.New("Job ID must be an integer")
 	}
 
-	client := &http.Client{}
+	jobID := c.Args().Get(0)
 
-	// TODO: Pass job ID as path paramater once API is configured to accept it.
-	req, err := http.NewRequest(
+	resp, err := makeRequestWithAuth(
 		http.MethodPut,
-		host+":"+port+"/jobs/kill",
+		host+":"+port+"/jobs/"+jobID+"/kill",
 		nil,
 	)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	req.SetBasicAuth(username, password)
-
-	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -187,4 +154,18 @@ func Kill(c *cli.Context) error {
 	fmt.Println(string(body))
 
 	return nil
+}
+
+// makeRequestWithAuth makes an HTTP request to a given endpoint after setting the request's authorization header.
+func makeRequestWithAuth(method, endpoint string, body io.Reader) (*http.Response, error) {
+	client := &http.Client{}
+
+	req, err := http.NewRequest(method, endpoint, body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req.SetBasicAuth(username, pw)
+
+	return client.Do(req)
 }

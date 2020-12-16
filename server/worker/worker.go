@@ -26,10 +26,15 @@ func Run(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var job Job
-	json.Unmarshal(reqBody, &job)
+	err = json.Unmarshal(reqBody, &job)
 
-	fmt.Fprint(w, "The worker library has received the following job:\n")
-	json.NewEncoder(w).Encode(job)
+	if err != nil || len(job.Command) == 0 {
+		w.WriteHeader(400)
+		w.Write([]byte("Bad request."))
+	} else {
+		fmt.Fprint(w, "The worker library has received the following job:\n")
+		json.NewEncoder(w).Encode(job)
+	}
 }
 
 // Status will query the log for the status of a given process.

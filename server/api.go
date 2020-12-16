@@ -18,13 +18,11 @@ const (
 func main() {
 	router := mux.NewRouter()
 
-	router.HandleFunc("/jobs/run", auth.AuthenticateUser(worker.Run))
-	router.HandleFunc("/jobs/{id:"+idRegex+"}/status", auth.AuthenticateUser(worker.Status))
-	router.HandleFunc("/jobs/{id:"+idRegex+"}/out", auth.AuthenticateUser(worker.Out))
-	router.HandleFunc("/jobs/{id:"+idRegex+"}/kill", auth.AuthenticateUser(worker.Kill))
-
-	http.Handle("/", router)
+	router.HandleFunc("/jobs/run", worker.Run)
+	router.HandleFunc("/jobs/{id:"+idRegex+"}/status", worker.Status)
+	router.HandleFunc("/jobs/{id:"+idRegex+"}/out", worker.Out)
+	router.HandleFunc("/jobs/{id:"+idRegex+"}/kill", worker.Kill)
 
 	fmt.Println("Listening...")
-	http.ListenAndServe(":"+port, nil)
+	http.ListenAndServe(":"+port, auth.AuthenticateUser(router))
 }

@@ -6,4 +6,7 @@ require github.com/gorilla/mux v1.8.0
 
 require golang.org/x/crypto v0.0.0-20201208171446-5f87f3452ae9
 
-require github.com/urfave/cli/v2 v2.3.0
+require (
+	github.com/urfave/cli/v2 v2.3.0
+	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324
+)

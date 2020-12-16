@@ -4,18 +4,19 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
 )
 
 // AuthenticateUser verifies the credentials in the Authorization header of a request by utilizing the bcrypt hashing function.
-func AuthenticateUser(handler http.HandlerFunc) http.HandlerFunc {
+func AuthenticateUser(router *mux.Router) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if username, pw, ok := r.BasicAuth(); !ok || !validate(username, pw) {
 			w.Header().Set("WWW-Authenticate", `Basic realm="Account Invalid"`)
 			w.WriteHeader(401)
 			w.Write([]byte("Invalid credentials. Access denied."))
 		} else {
-			handler(w, r)
+			router.ServeHTTP(w, r)
 		}
 	}
 }

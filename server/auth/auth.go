@@ -27,26 +27,17 @@ func Secure(router *mux.Router) http.HandlerFunc {
 }
 
 func validate(username, pw string) bool {
+	// TODO: Store user credentials in a secure database.
+	// User passwords should be hashed before storing them in the DB.
 	if username == "default_user" {
-		// TODO: Store user credentials in a secure database.
-		// User passwords should be hashed before storing them in the DB.
-		hash, err := hashPassword("123456")
+		// bcrypt cost of 10 is chosen because it takes roughly 75-100ms to execute, a benchmark that is relatively unnoticeable to the user but resiliant against brute-force attacks.
+		hash, err := bcrypt.GenerateFromPassword([]byte("123456"), 10)
 		if err != nil {
 			log.Fatal(err)
 		}
 
-		return checkPasswordHash(pw, hash)
+		err = bcrypt.CompareHashAndPassword(hash, []byte(pw))
+		return err == nil
 	}
 	return false
-}
-
-func hashPassword(password string) (string, error) {
-	// bcrypt cost of 10 is chosen because it takes roughly 75-100ms to execute, a benchmark that is relatively unnoticeable to the user but resiliant against brute-force attacks.
-	bytes, err := bcrypt.GenerateFromPassword([]byte(password), 10)
-	return string(bytes), err
-}
-
-func checkPasswordHash(password, hash string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return err == nil
 }

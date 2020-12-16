@@ -6,7 +6,10 @@ import (
 
 	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/time/rate"
 )
+
+var limiter = rate.NewLimiter(5, 1) // Allows request every 200ms.
 
 // AuthenticateUser verifies the credentials in the Authorization header of a request by utilizing the bcrypt hashing function.
 func AuthenticateUser(router *mux.Router) http.HandlerFunc {
@@ -15,6 +18,9 @@ func AuthenticateUser(router *mux.Router) http.HandlerFunc {
 			w.Header().Set("WWW-Authenticate", `Basic realm="Account Invalid"`)
 			w.WriteHeader(401)
 			w.Write([]byte("Invalid credentials. Access denied."))
+		} else if !limiter.Allow() {
+			w.WriteHeader(429)
+			w.Write([]byte("Too many requests."))
 		} else {
 			router.ServeHTTP(w, r)
 		}

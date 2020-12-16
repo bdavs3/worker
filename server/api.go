@@ -6,6 +6,7 @@ import (
 
 	"github.com/gorilla/mux"
 
+	"github.com/bdavs3/worker/server/auth"
 	"github.com/bdavs3/worker/server/worker"
 )
 
@@ -17,10 +18,10 @@ const (
 func main() {
 	router := mux.NewRouter()
 
-	router.HandleFunc("/jobs/run", worker.Run)
-	router.HandleFunc("/jobs/{id:"+idRegex+"}/status", worker.Status)
-	router.HandleFunc("/jobs/{id:"+idRegex+"}/out", worker.Out)
-	router.HandleFunc("/jobs/{id:"+idRegex+"}/kill", worker.Kill)
+	router.HandleFunc("/jobs/run", auth.AuthenticateUser(worker.Run))
+	router.HandleFunc("/jobs/{id:"+idRegex+"}/status", auth.AuthenticateUser(worker.Status))
+	router.HandleFunc("/jobs/{id:"+idRegex+"}/out", auth.AuthenticateUser(worker.Out))
+	router.HandleFunc("/jobs/{id:"+idRegex+"}/kill", auth.AuthenticateUser(worker.Kill))
 
 	http.Handle("/", router)
 

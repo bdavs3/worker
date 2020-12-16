@@ -11,14 +11,13 @@ import (
 
 var limiter = rate.NewLimiter(5, 1) // Allows request every 200ms.
 
-// AuthenticateUser verifies the credentials in the Authorization header of a request by utilizing the bcrypt hashing function.
-func AuthenticateUser(router *mux.Router) http.HandlerFunc {
+// Secure enforces user authentication and rate limiting before allowing the router to direct a request to a given endpoint.
+func Secure(router *mux.Router) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if username, pw, ok := r.BasicAuth(); !ok || !validate(username, pw) {
-			w.Header().Set("WWW-Authenticate", `Basic realm="Account Invalid"`)
 			w.WriteHeader(401)
 			w.Write([]byte("Invalid credentials. Access denied."))
-		} else if !limiter.Allow() {
+		} else if !limiter.Allow() { // TODO: Enforce per-user
 			w.WriteHeader(429)
 			w.Write([]byte("Too many requests."))
 		} else {

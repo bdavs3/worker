@@ -24,5 +24,5 @@ func main() {
 	router.HandleFunc("/jobs/{id:"+idRegex+"}/kill", worker.Kill)
 
 	fmt.Println("Listening...")
-	http.ListenAndServe(":"+port, auth.AuthenticateUser(router))
+	http.ListenAndServe(":"+port, auth.Secure(router))
 }

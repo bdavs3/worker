@@ -24,6 +24,7 @@ func main() {
 	router.HandleFunc("/jobs/{id:"+idRegex+"}/kill", worker.Kill)
 
 	fmt.Println("Listening...")
-	// TODO (next): ListenAndServeTLS by using a pre-generated private key and self-signed certificate located inside the repository.
+	// TODO (next): ListenAndServeTLS by using a pre-generated private key
+	// and self-signed certificate located inside the repository.
 	http.ListenAndServe(":"+port, auth.Secure(router))
 }

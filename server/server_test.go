@@ -33,7 +33,11 @@ func TestAPIRequest(t *testing.T) {
 				log.Fatal(err)
 			}
 
-			res, err := http.Post(ts.URL, "application/json", bytes.NewBuffer(requestBody))
+			res, err := http.Post(
+				ts.URL,
+				"application/json",
+				bytes.NewBuffer(requestBody),
+			)
 			if err != nil {
 				log.Fatal(err)
 			}

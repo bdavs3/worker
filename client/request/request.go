@@ -17,8 +17,14 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// TODO (next): Change host protocol to 'https' and port to 443 once API serves with TLS.
-// TODO (out of scope): Rather than using hard-coded user credentials, provide the user with a way to create an account and log in. Once authenticated with the API, the client could receive a session token that precludes the need to authenticate on each subsequent request.
+// TODO (next): Change host protocol to 'https' and port to 443 once API
+// serves with TLS.
+
+// TODO (out of scope): Rather than using hard-coded user credentials, provide
+// the user with a way to create an account and log in. Once authenticated
+// with the API, the client could receive a session token that precludes the
+// need to authenticate on each subsequent request.
+
 const (
 	host     = "http://localhost"
 	port     = "8080"
@@ -159,7 +165,8 @@ func Kill(c *cli.Context) error {
 	return nil
 }
 
-// makeRequestWithAuth makes an HTTP request to a given endpoint after setting the request's Authorization header.
+// makeRequestWithAuth makes an HTTP request to a given endpoint after setting
+// the request's Authorization header.
 func makeRequestWithAuth(method, endpoint string, body io.Reader) (*http.Response, error) {
 	client := &http.Client{Timeout: 5 * time.Second}
 

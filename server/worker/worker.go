@@ -10,7 +10,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// TODO (next): Execute jobs passed to this library concurrently using goroutines. Keep track of job execution in a log stored in memory, ensuring that access to this log is synchronized but does not cause deadlock. Allow active processes to be terminated.
+// TODO (next): Execute jobs passed to this library concurrently using
+// goroutines. Keep track of job execution in a log stored in memory,
+// ensuring that access to this log is synchronized but does not cause
+// deadlock. Allow active processes to be terminated.
 
 // Job represents a Linux process to be handled by the worker library.
 type Job struct {

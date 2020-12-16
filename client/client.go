@@ -14,7 +14,8 @@ func main() {
 		Name:  "worker",
 		Usage: "run arbitrary Linux jobs",
 		Commands: []*cli.Command{
-			// By default, the CLI includes a "help" command that displays app info and command usage.
+			// By default, the CLI includes a "help" command that displays app
+			// info and command usage.
 			{
 				Name:    "run",
 				Aliases: []string{"r"},

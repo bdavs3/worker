@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/bdavs3/worker/server/worker"
+
 	"github.com/urfave/cli/v2"
 )
 

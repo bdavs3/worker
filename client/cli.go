@@ -4,9 +4,9 @@ import (
 	"log"
 	"os"
 
-	"github.com/urfave/cli/v2"
-
 	"github.com/bdavs3/worker/client/request"
+
+	"github.com/urfave/cli/v2"
 )
 
 func main() {

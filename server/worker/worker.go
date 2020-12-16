@@ -1,7 +1,10 @@
 package worker
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -17,7 +20,16 @@ type Job struct {
 
 // Run will initiate the execution of a Linux process.
 func Run(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprint(w, "Run")
+	reqBody, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var job Job
+	json.Unmarshal(reqBody, &job)
+
+	fmt.Fprint(w, "The worker library has received the following job:\n")
+	json.NewEncoder(w).Encode(job)
 }
 
 // Status will query the log for the status of a given process.

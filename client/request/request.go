@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/bdavs3/worker/server/worker"
 	"github.com/urfave/cli/v2"
@@ -158,7 +159,7 @@ func Kill(c *cli.Context) error {
 
 // makeRequestWithAuth makes an HTTP request to a given endpoint after setting the request's authorization header.
 func makeRequestWithAuth(method, endpoint string, body io.Reader) (*http.Response, error) {
-	client := &http.Client{}
+	client := &http.Client{Timeout: 5 * time.Second}
 
 	req, err := http.NewRequest(method, endpoint, body)
 	if err != nil {

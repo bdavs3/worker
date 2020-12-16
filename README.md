@@ -1,6 +1,8 @@
 # Worker
 
-Worker is a command-line service for running arbitrary Linux processes.
+**Warning**: This README describes proposed usage of the service, which is still in development.
+
+`worker` is a command-line service for running arbitrary Linux processes.
 
 To use it, first run the server:
 

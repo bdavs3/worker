@@ -9,6 +9,8 @@ import (
 	"golang.org/x/time/rate"
 )
 
+// TODO (next): Enhance the rate-limiting authorization check by making it user-specific. Add two additional authorization checks: (1) Only allow users to access endpoints for jobs they created and (2) Enforce local-only request origin policy.
+
 var limiter = rate.NewLimiter(5, 1) // Allows a request every 200ms.
 
 // Secure enforces user authentication and rate limiting before allowing a request to reach a given endpoint.

@@ -18,10 +18,10 @@ const (
 func main() {
 	router := mux.NewRouter()
 
-	router.HandleFunc("/jobs/run", worker.Run)
-	router.HandleFunc("/jobs/{id:"+idRegex+"}/status", worker.Status)
-	router.HandleFunc("/jobs/{id:"+idRegex+"}/out", worker.Out)
-	router.HandleFunc("/jobs/{id:"+idRegex+"}/kill", worker.Kill)
+	router.HandleFunc("/jobs/run", worker.Run).Methods(http.MethodPost)
+	router.HandleFunc("/jobs/{id:"+idRegex+"}/status", worker.Status).Methods(http.MethodGet)
+	router.HandleFunc("/jobs/{id:"+idRegex+"}/out", worker.Out).Methods(http.MethodGet)
+	router.HandleFunc("/jobs/{id:"+idRegex+"}/kill", worker.Kill).Methods(http.MethodPut)
 
 	fmt.Println("Listening...")
 	// TODO (next): ListenAndServeTLS by using a pre-generated private key

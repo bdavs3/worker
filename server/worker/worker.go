@@ -32,7 +32,7 @@ func Run(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(reqBody, &job)
 
 	if err != nil || len(job.Command) == 0 {
-		w.WriteHeader(400)
+		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Bad request."))
 	} else {
 		fmt.Fprint(w, "The worker library has received the following job:\n")

@@ -20,10 +20,10 @@ var limiter = rate.NewLimiter(5, 1) // Allows a request every 200ms.
 func Secure(router *mux.Router) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if username, pw, ok := r.BasicAuth(); !ok || !validate(username, pw) {
-			w.WriteHeader(401)
+			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte("Invalid credentials. Access denied."))
 		} else if !limiter.Allow() { // TODO (next): Enforce per-user.
-			w.WriteHeader(429)
+			w.WriteHeader(http.StatusTooManyRequests)
 			w.Write([]byte("Too many requests."))
 		} else {
 			router.ServeHTTP(w, r)

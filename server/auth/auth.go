@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -37,15 +36,8 @@ func validate(username, pw string) bool {
 	// validate request Authorization headers against them. It is critical
 	// that passwords are hashed before storage in the database.
 	if username == "default_user" {
-		// bcrypt cost of 10 is chosen because it takes roughly 75-100ms to
-		// execute, a benchmark that is relatively unnoticeable to the user
-		// but resiliant against brute-force attacks.
-		hash, err := bcrypt.GenerateFromPassword([]byte("123456"), 10)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		err = bcrypt.CompareHashAndPassword(hash, []byte(pw))
+		hash := "$2a$10$P7GoVlD0fEu14OWE76dGzude2NLw0pi05Gzar6rm1b.oD04lcvyaq"
+		err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(pw))
 		return err == nil
 	}
 	return false

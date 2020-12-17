@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -25,18 +24,25 @@ type Job struct {
 func Run(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		log.Fatal(err)
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte("Unable to read request."))
+		return
 	}
 
 	var job Job
 	err = json.Unmarshal(reqBody, &job)
-
 	if err != nil || len(job.Command) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Bad request."))
-	} else {
-		fmt.Fprint(w, "The worker library has received the following job:\n")
-		json.NewEncoder(w).Encode(job)
+		w.Write([]byte("Request does not contain a valid job."))
+		return
+	}
+
+	// TODO (next): Rather than echoing the job back to the client, respond with
+	// the unique ID assigned to the job.
+	err = json.NewEncoder(w).Encode(job)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte("Unable to complete request."))
 	}
 }
 

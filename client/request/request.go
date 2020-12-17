@@ -26,8 +26,7 @@ import (
 // need to authenticate on each subsequent request.
 
 const (
-	host     = "http://localhost"
-	port     = "8080"
+	host     = "http://localhost:8080"
 	username = "default_user"
 	pw       = "123456"
 )
@@ -50,7 +49,7 @@ func Run(c *cli.Context) error {
 
 	resp, err := makeRequestWithAuth(
 		http.MethodPost,
-		host+":"+port+"/jobs/run",
+		host+"/jobs/run",
 		bytes.NewBuffer(requestBody),
 	)
 	if err != nil {
@@ -82,7 +81,7 @@ func Status(c *cli.Context) error {
 
 	resp, err := makeRequestWithAuth(
 		http.MethodGet,
-		host+":"+port+"/jobs/"+jobID+"/status",
+		host+"/jobs/"+jobID+"/status",
 		nil,
 	)
 	if err != nil {
@@ -114,7 +113,7 @@ func Out(c *cli.Context) error {
 
 	resp, err := makeRequestWithAuth(
 		http.MethodGet,
-		host+":"+port+"/jobs/"+jobID+"/out",
+		host+"/jobs/"+jobID+"/out",
 		nil,
 	)
 	if err != nil {
@@ -146,7 +145,7 @@ func Kill(c *cli.Context) error {
 
 	resp, err := makeRequestWithAuth(
 		http.MethodPut,
-		host+":"+port+"/jobs/"+jobID+"/kill",
+		host+"/jobs/"+jobID+"/kill",
 		nil,
 	)
 	if err != nil {

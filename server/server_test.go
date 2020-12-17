@@ -3,10 +3,10 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/bdavs3/worker/server/worker"
 )
@@ -37,20 +37,29 @@ func TestAPIRequest(t *testing.T) {
 		t.Run(test.comment, func(t *testing.T) {
 			requestBody, err := json.Marshal(test.job)
 			if err != nil {
-				log.Fatal(err)
+				t.Error("Error marshalling job as JSON.")
 			}
 
-			res, err := http.Post(
+			req, err := http.NewRequest(
+				http.MethodPost,
 				ts.URL,
-				"application/json",
 				bytes.NewBuffer(requestBody),
 			)
 			if err != nil {
-				log.Fatal(err)
+				t.Error("Error forming request.")
 			}
 
-			if res.StatusCode != test.want {
-				t.Errorf("got %d, want %d", res.StatusCode, test.want)
+			client := &http.Client{Timeout: 5 * time.Second}
+
+			resp, err := client.Do(req)
+			if err != nil {
+				t.Error("Did not receive response before timeout.")
+			}
+
+			defer resp.Body.Close()
+
+			if resp.StatusCode != test.want {
+				t.Errorf("got %d, want %d", resp.StatusCode, test.want)
 			}
 		})
 	}

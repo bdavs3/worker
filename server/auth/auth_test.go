@@ -1,22 +1,37 @@
 package auth
 
 import (
-	"fmt"
 	"testing"
 )
 
 func TestAuthentication(t *testing.T) {
 	var tests = []struct {
+		comment      string
 		username, pw string
 		want         bool
 	}{
-		{"default_user", "123456", true},
-		{"default_user", "abcdef", false},
+		{
+			comment:  "user with correct password",
+			username: "default_user",
+			pw:       "123456",
+			want:     true,
+		},
+		{
+			comment:  "user with incorrect password",
+			username: "default_user",
+			pw:       "abcdef",
+			want:     false,
+		},
+		{
+			comment:  "unknown username",
+			username: "four_tet",
+			pw:       "16oceans",
+			want:     false,
+		},
 	}
 
 	for _, test := range tests {
-		testname := fmt.Sprintf("%s, %s", test.username, test.pw)
-		t.Run(testname, func(t *testing.T) {
+		t.Run(test.comment, func(t *testing.T) {
 			authenticated := validate(test.username, test.pw)
 			if authenticated != test.want {
 				t.Errorf("got %t, want %t", authenticated, test.want)

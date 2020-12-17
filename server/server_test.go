@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"net/http/httptest"
@@ -18,16 +17,24 @@ func TestAPIRequest(t *testing.T) {
 	defer ts.Close()
 
 	var tests = []struct {
-		job  worker.Job
-		want int
+		comment string
+		job     worker.Job
+		want    int
 	}{
-		{worker.Job{Command: "echo", Args: []string{"hello"}}, 200},
-		{worker.Job{Command: "", Args: []string{}}, 400},
+		{
+			comment: "well-formed request to /jobs/run",
+			job:     worker.Job{Command: "echo", Args: []string{"hello"}},
+			want:    http.StatusOK,
+		},
+		{
+			comment: "poorly-formed request to /jobs/run",
+			job:     worker.Job{Command: "", Args: []string{}},
+			want:    http.StatusBadRequest,
+		},
 	}
 
 	for _, test := range tests {
-		testname := fmt.Sprintf("%+v, %d", test.job, test.want)
-		t.Run(testname, func(t *testing.T) {
+		t.Run(test.comment, func(t *testing.T) {
 			requestBody, err := json.Marshal(test.job)
 			if err != nil {
 				log.Fatal(err)

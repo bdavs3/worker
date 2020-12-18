@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/bdavs3/worker/library/worker"
 	"github.com/bdavs3/worker/server/auth"
-	"github.com/bdavs3/worker/server/worker"
 
 	"github.com/gorilla/mux"
 )

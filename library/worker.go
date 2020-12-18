@@ -1,4 +1,4 @@
-package worker
+package library
 
 import (
 	"encoding/json"

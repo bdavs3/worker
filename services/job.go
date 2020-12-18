@@ -1,4 +1,4 @@
-package request
+package services
 
 import (
 	"bytes"
@@ -26,6 +26,11 @@ import (
 // need to authenticate on each subsequent request.
 
 const host = "http://localhost:8080"
+
+type Job struct {
+	Command string
+	Args    []string
+}
 
 // Run passes a job to the worker library for execution.
 func Run(c *cli.Context) error {

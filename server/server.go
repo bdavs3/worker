@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/bdavs3/worker/server/auth"
-	"github.com/bdavs3/worker/server/worker"
+	"github.com/bdavs3/worker/worker"
 
 	"github.com/gorilla/mux"
 )

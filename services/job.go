@@ -1,4 +1,4 @@
-package request
+package services
 
 import (
 	"bytes"
@@ -12,8 +12,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/bdavs3/worker/server/worker"
-
 	"github.com/urfave/cli/v2"
 )
 
@@ -25,15 +23,39 @@ import (
 // with the API, the client could receive a session token that precludes the
 // need to authenticate on each subsequent request.
 
-const host = "http://localhost:8080"
+const (
+	host    = "http://localhost:8080"
+	timeout = 5
+)
 
-// Run passes a job to the worker library for execution.
-func Run(c *cli.Context) error {
+// Job represents a Linux process to be passed to the API.
+type Job struct {
+	Command string   `json:"command"`
+	Args    []string `json:"args"`
+}
+
+// JobService contains a BaseURL to prepend to API endpoints and an HTTPClient
+// for making requests to those endpoints.
+type JobService struct {
+	BaseURL    string
+	HTTPClient *http.Client
+}
+
+// NewJobService creates a JobService struct with a default BaseURL and HTTPClient.
+func NewJobService() *JobService {
+	return &JobService{
+		BaseURL:    host,
+		HTTPClient: &http.Client{Timeout: timeout * time.Second},
+	}
+}
+
+// PostJob passes a job to the worker library for execution.
+func (js *JobService) PostJob(c *cli.Context) error {
 	if c.NArg() == 0 {
 		return errors.New("No job supplied to 'run' command")
 	}
 
-	job := worker.Job{
+	job := Job{
 		Command: c.Args().Get(0),
 		Args:    c.Args().Slice()[1:],
 	}
@@ -43,9 +65,9 @@ func Run(c *cli.Context) error {
 		return err
 	}
 
-	responseBody, err := makeRequestWithAuth(
+	responseBody, err := js.makeRequestWithAuth(
 		http.MethodPost,
-		host+"/jobs/run",
+		"/jobs/run",
 		bytes.NewBuffer(requestBody),
 	)
 	if err != nil {
@@ -57,8 +79,8 @@ func Run(c *cli.Context) error {
 	return nil
 }
 
-// Status queries the status of a job being handled by the worker library.
-func Status(c *cli.Context) error {
+// GetJobStatus queries the status of a job being handled by the worker library.
+func (js *JobService) GetJobStatus(c *cli.Context) error {
 	if c.NArg() != 1 {
 		return errors.New("No job ID supplied to 'status' command")
 	}
@@ -68,9 +90,9 @@ func Status(c *cli.Context) error {
 
 	jobID := c.Args().Get(0)
 
-	responseBody, err := makeRequestWithAuth(
+	responseBody, err := js.makeRequestWithAuth(
 		http.MethodGet,
-		fmt.Sprintf("%s/jobs/%s/status", host, jobID),
+		fmt.Sprintf("/jobs/%s/status", jobID),
 		nil,
 	)
 	if err != nil {
@@ -82,8 +104,8 @@ func Status(c *cli.Context) error {
 	return nil
 }
 
-// Out queries the output of a job being handled by the worker library.
-func Out(c *cli.Context) error {
+// GetJobOutput queries the output of a job being handled by the worker library.
+func (js *JobService) GetJobOutput(c *cli.Context) error {
 	if c.NArg() != 1 {
 		return errors.New("No job ID supplied to 'out' command")
 	}
@@ -93,9 +115,9 @@ func Out(c *cli.Context) error {
 
 	jobID := c.Args().Get(0)
 
-	responseBody, err := makeRequestWithAuth(
+	responseBody, err := js.makeRequestWithAuth(
 		http.MethodGet,
-		fmt.Sprintf("%s/jobs/%s/out", host, jobID),
+		fmt.Sprintf("/jobs/%s/out", jobID),
 		nil,
 	)
 	if err != nil {
@@ -107,8 +129,8 @@ func Out(c *cli.Context) error {
 	return nil
 }
 
-// Kill terminates a job being handled by the worker library.
-func Kill(c *cli.Context) error {
+// KillJob terminates a job being handled by the worker library.
+func (js *JobService) KillJob(c *cli.Context) error {
 	if c.NArg() != 1 {
 		return errors.New("No job ID supplied to 'kill' command")
 	}
@@ -118,9 +140,9 @@ func Kill(c *cli.Context) error {
 
 	jobID := c.Args().Get(0)
 
-	responseBody, err := makeRequestWithAuth(
+	responseBody, err := js.makeRequestWithAuth(
 		http.MethodPut,
-		fmt.Sprintf("%s/jobs/%s/kill", host, jobID),
+		fmt.Sprintf("/jobs/%s/kill", jobID),
 		nil,
 	)
 	if err != nil {
@@ -135,17 +157,15 @@ func Kill(c *cli.Context) error {
 // makeRequestWithAuth makes an HTTP request to a given endpoint after setting
 // the request's Authorization header. It reads the response body and returns
 // it as a string.
-func makeRequestWithAuth(method, endpoint string, requestBody io.Reader) (string, error) {
-	req, err := http.NewRequest(method, endpoint, requestBody)
+func (js *JobService) makeRequestWithAuth(method, endpoint string, requestBody io.Reader) (string, error) {
+	req, err := http.NewRequest(method, js.BaseURL+endpoint, requestBody)
 	if err != nil {
 		return "", err
 	}
 
 	req.SetBasicAuth(os.Getenv("username"), os.Getenv("pw"))
 
-	client := &http.Client{Timeout: 5 * time.Second}
-
-	resp, err := client.Do(req)
+	resp, err := js.HTTPClient.Do(req)
 	if err != nil {
 		return "", err
 	}

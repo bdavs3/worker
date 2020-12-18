@@ -22,12 +22,14 @@ func Secure(router *mux.Router) http.HandlerFunc {
 		if username, pw, ok := r.BasicAuth(); !ok || !validate(username, pw) {
 			w.WriteHeader(http.StatusUnauthorized)
 			w.Write([]byte("Invalid credentials. Access denied."))
-		} else if !limiter.Allow() { // TODO (next): Enforce per-user.
+			return
+		}
+		if !limiter.Allow() { // TODO (next): Enforce per-user.
 			w.WriteHeader(http.StatusTooManyRequests)
 			w.Write([]byte("Too many requests."))
-		} else {
-			router.ServeHTTP(w, r)
+			return
 		}
+		router.ServeHTTP(w, r)
 	}
 }
 

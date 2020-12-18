@@ -9,7 +9,6 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strconv"
 	"time"
 
 	"github.com/urfave/cli/v2"
@@ -84,9 +83,6 @@ func (js *JobService) GetJobStatus(c *cli.Context) error {
 	if c.NArg() != 1 {
 		return errors.New("No job ID supplied to 'status' command")
 	}
-	if _, err := strconv.Atoi(c.Args().Get(0)); err != nil {
-		return errors.New("Job ID must be an integer")
-	}
 
 	jobID := c.Args().Get(0)
 
@@ -109,9 +105,6 @@ func (js *JobService) GetJobOutput(c *cli.Context) error {
 	if c.NArg() != 1 {
 		return errors.New("No job ID supplied to 'out' command")
 	}
-	if _, err := strconv.Atoi(c.Args().Get(0)); err != nil {
-		return errors.New("Job ID must be an integer")
-	}
 
 	jobID := c.Args().Get(0)
 
@@ -133,9 +126,6 @@ func (js *JobService) GetJobOutput(c *cli.Context) error {
 func (js *JobService) KillJob(c *cli.Context) error {
 	if c.NArg() != 1 {
 		return errors.New("No job ID supplied to 'kill' command")
-	}
-	if _, err := strconv.Atoi(c.Args().Get(0)); err != nil {
-		return errors.New("Job ID must be an integer")
 	}
 
 	jobID := c.Args().Get(0)

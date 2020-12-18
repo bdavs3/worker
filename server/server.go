@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	// TODO (next): Change this regex to match chosen UUID/GUID format.
 	idRegex = "[1-9][0-9]*"
 	port    = "8080"
 )

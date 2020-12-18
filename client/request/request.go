@@ -74,7 +74,7 @@ func Status(c *cli.Context) error {
 
 	responseBody, err := makeRequestWithAuth(
 		http.MethodGet,
-		host+"/jobs/"+jobID+"/status",
+		fmt.Sprintf("%s/jobs/%s/status", host, jobID),
 		nil,
 	)
 	if err != nil {
@@ -99,7 +99,7 @@ func Out(c *cli.Context) error {
 
 	responseBody, err := makeRequestWithAuth(
 		http.MethodGet,
-		host+"/jobs/"+jobID+"/out",
+		fmt.Sprintf("%s/jobs/%s/out", host, jobID),
 		nil,
 	)
 	if err != nil {
@@ -124,7 +124,7 @@ func Kill(c *cli.Context) error {
 
 	responseBody, err := makeRequestWithAuth(
 		http.MethodPut,
-		host+"/jobs/"+jobID+"/kill",
+		fmt.Sprintf("%s/jobs/%s/kill", host, jobID),
 		nil,
 	)
 	if err != nil {

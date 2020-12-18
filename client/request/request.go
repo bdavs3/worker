@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -41,7 +40,7 @@ func Run(c *cli.Context) error {
 
 	requestBody, err := json.Marshal(job)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	responseBody, err := makeRequestWithAuth(
@@ -50,7 +49,7 @@ func Run(c *cli.Context) error {
 		bytes.NewBuffer(requestBody),
 	)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	fmt.Println(responseBody)
@@ -75,7 +74,7 @@ func Status(c *cli.Context) error {
 		nil,
 	)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	fmt.Println(responseBody)
@@ -100,7 +99,7 @@ func Out(c *cli.Context) error {
 		nil,
 	)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	fmt.Println(responseBody)
@@ -125,7 +124,7 @@ func Kill(c *cli.Context) error {
 		nil,
 	)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	fmt.Println(responseBody)
@@ -139,7 +138,7 @@ func Kill(c *cli.Context) error {
 func makeRequestWithAuth(method, endpoint string, requestBody io.Reader) (string, error) {
 	req, err := http.NewRequest(method, endpoint, requestBody)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	req.SetBasicAuth(os.Getenv("username"), os.Getenv("pw"))
@@ -148,14 +147,14 @@ func makeRequestWithAuth(method, endpoint string, requestBody io.Reader) (string
 
 	resp, err := client.Do(req)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Fatal(err)
+		return "", err
 	}
 
 	return string(body), nil

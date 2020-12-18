@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/bdavs3/worker/server/worker"
+	"github.com/bdavs3/worker/worker"
 )
 
 func TestAPIRequest(t *testing.T) {

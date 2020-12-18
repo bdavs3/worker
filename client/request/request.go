@@ -9,6 +9,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -25,11 +26,7 @@ import (
 // with the API, the client could receive a session token that precludes the
 // need to authenticate on each subsequent request.
 
-const (
-	host     = "http://localhost:8080"
-	username = "default_user"
-	pw       = "123456"
-)
+const host = "http://localhost:8080"
 
 // Run passes a job to the worker library for execution.
 func Run(c *cli.Context) error {
@@ -145,7 +142,7 @@ func makeRequestWithAuth(method, endpoint string, requestBody io.Reader) (string
 		log.Fatal(err)
 	}
 
-	req.SetBasicAuth(username, pw)
+	req.SetBasicAuth(os.Getenv("username"), os.Getenv("pw"))
 
 	client := &http.Client{Timeout: 5 * time.Second}
 

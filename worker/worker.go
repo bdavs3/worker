@@ -16,8 +16,8 @@ import (
 
 // Job represents a Linux process to be handled by the worker library.
 type Job struct {
-	Command string
-	Args    []string
+	Command string   `json:"command"`
+	Args    []string `json:"args"`
 }
 
 // Run will initiate the execution of a Linux process.

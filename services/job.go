@@ -11,6 +11,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/bdavs3/worker/worker"
+
 	"github.com/urfave/cli/v2"
 )
 
@@ -26,12 +28,6 @@ const (
 	host    = "http://localhost:8080"
 	timeout = 5
 )
-
-// Job represents a Linux process to be passed to the API.
-type Job struct {
-	Command string   `json:"command"`
-	Args    []string `json:"args"`
-}
 
 // JobService contains a BaseURL to prepend to API endpoints and an HTTPClient
 // for making requests to those endpoints.
@@ -54,7 +50,7 @@ func (js *JobService) PostJob(c *cli.Context) error {
 		return errors.New("No job supplied to 'run' command")
 	}
 
-	job := Job{
+	job := worker.Job{
 		Command: c.Args().Get(0),
 		Args:    c.Args().Slice()[1:],
 	}

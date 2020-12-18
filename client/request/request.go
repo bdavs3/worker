@@ -47,7 +47,7 @@ func Run(c *cli.Context) error {
 		log.Fatal(err)
 	}
 
-	resp, err := makeRequestWithAuth(
+	responseBody, err := makeRequestWithAuth(
 		http.MethodPost,
 		host+"/jobs/run",
 		bytes.NewBuffer(requestBody),
@@ -56,14 +56,7 @@ func Run(c *cli.Context) error {
 		log.Fatal(err)
 	}
 
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(string(body))
+	fmt.Println(responseBody)
 
 	return nil
 }
@@ -79,7 +72,7 @@ func Status(c *cli.Context) error {
 
 	jobID := c.Args().Get(0)
 
-	resp, err := makeRequestWithAuth(
+	responseBody, err := makeRequestWithAuth(
 		http.MethodGet,
 		host+"/jobs/"+jobID+"/status",
 		nil,
@@ -88,14 +81,7 @@ func Status(c *cli.Context) error {
 		log.Fatal(err)
 	}
 
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(string(body))
+	fmt.Println(responseBody)
 
 	return nil
 }
@@ -111,7 +97,7 @@ func Out(c *cli.Context) error {
 
 	jobID := c.Args().Get(0)
 
-	resp, err := makeRequestWithAuth(
+	responseBody, err := makeRequestWithAuth(
 		http.MethodGet,
 		host+"/jobs/"+jobID+"/out",
 		nil,
@@ -120,14 +106,7 @@ func Out(c *cli.Context) error {
 		log.Fatal(err)
 	}
 
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println(string(body))
+	fmt.Println(responseBody)
 
 	return nil
 }
@@ -143,11 +122,34 @@ func Kill(c *cli.Context) error {
 
 	jobID := c.Args().Get(0)
 
-	resp, err := makeRequestWithAuth(
+	responseBody, err := makeRequestWithAuth(
 		http.MethodPut,
 		host+"/jobs/"+jobID+"/kill",
 		nil,
 	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Println(responseBody)
+
+	return nil
+}
+
+// makeRequestWithAuth makes an HTTP request to a given endpoint after setting
+// the request's Authorization header. It reads the response body and returns
+// it as a string.
+func makeRequestWithAuth(method, endpoint string, requestBody io.Reader) (string, error) {
+	req, err := http.NewRequest(method, endpoint, requestBody)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	req.SetBasicAuth(username, pw)
+
+	client := &http.Client{Timeout: 5 * time.Second}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -159,22 +161,5 @@ func Kill(c *cli.Context) error {
 		log.Fatal(err)
 	}
 
-	fmt.Println(string(body))
-
-	return nil
-}
-
-// makeRequestWithAuth makes an HTTP request to a given endpoint after setting
-// the request's Authorization header.
-func makeRequestWithAuth(method, endpoint string, body io.Reader) (*http.Response, error) {
-	client := &http.Client{Timeout: 5 * time.Second}
-
-	req, err := http.NewRequest(method, endpoint, body)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	req.SetBasicAuth(username, pw)
-
-	return client.Do(req)
+	return string(body), nil
 }

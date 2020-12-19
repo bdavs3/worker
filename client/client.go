@@ -162,6 +162,9 @@ func (c *Client) makeRequestWithAuth(method, endpoint string, requestBody io.Rea
 	if err != nil {
 		return "", err
 	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("HTTP status %d\n%s", resp.StatusCode, body)
+	}
 
 	return string(body), nil
 }

@@ -12,7 +12,7 @@ import (
 )
 
 func TestAPIRequest(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(worker.Run))
+	ts := httptest.NewServer(http.HandlerFunc(postJob))
 
 	defer ts.Close()
 

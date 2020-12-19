@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"net"
 	"net/http"
 	"sync"
 
@@ -9,9 +10,7 @@ import (
 	"golang.org/x/time/rate"
 )
 
-// TODO (next): Add two additional authorization checks: (1) Only allow
-// users to access endpoints for jobs they created and (2) Enforce local-only
-// request origin policy.
+// TODO (next): Only allow users to access endpoints for jobs they created.
 
 const (
 	globalUsername = "default_user"
@@ -42,6 +41,13 @@ func Secure(router *mux.Router) http.HandlerFunc {
 			w.Write([]byte("Too many requests."))
 			return
 		}
+
+		if isLocal, err := isLocalRequest(r); err != nil || !isLocal {
+			w.WriteHeader(http.StatusForbidden)
+			w.Write([]byte("Forbidden non-local request."))
+			return
+		}
+
 		router.ServeHTTP(w, r)
 	}
 }
@@ -68,4 +74,45 @@ func getUserLimiter(username string) *rate.Limiter {
 	}
 
 	return limiter
+}
+
+func isLocalRequest(r *http.Request) (bool, error) {
+	// TODO (out of scope): Getting the network address of the request using
+	// RemoteAddr will introduce problems if the request is passed thorugh a
+	// proxy or load balancer, for example, and is something that would need
+	// to be accounted for in this function.
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return false, err
+	}
+
+	reqIP := net.ParseIP(host)
+
+	ifaces, err := net.Interfaces()
+	if err != nil {
+		return false, err
+	}
+
+	for _, iface := range ifaces {
+		addrs, err := iface.Addrs()
+		if err != nil {
+			return false, err
+		}
+
+		for _, addr := range addrs {
+			var ip net.IP
+			switch v := addr.(type) {
+			case *net.IPNet:
+				ip = v.IP
+			case *net.IPAddr:
+				ip = v.IP
+			}
+
+			if reqIP.Equal(ip) {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }

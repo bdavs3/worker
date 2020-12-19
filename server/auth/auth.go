@@ -13,6 +13,11 @@ import (
 // users to access endpoints for jobs they created and (2) Enforce local-only
 // request origin policy.
 
+const (
+	globalUsername = "default_user"
+	globalHash     = "$2a$10$P7GoVlD0fEu14OWE76dGzude2NLw0pi05Gzar6rm1b.oD04lcvyaq"
+)
+
 var limiter = rate.NewLimiter(5, 1) // Allows a request every 200ms.
 
 // Secure enforces user authentication and rate limiting before allowing a
@@ -37,9 +42,8 @@ func validate(username, pw string) bool {
 	// TODO (out of scope): Store user credentials in a secure database and
 	// validate request Authorization headers against them. It is critical
 	// that passwords are hashed before storage in the database.
-	if username == "default_user" {
-		hash := "$2a$10$P7GoVlD0fEu14OWE76dGzude2NLw0pi05Gzar6rm1b.oD04lcvyaq"
-		err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(pw))
+	if username == globalUsername {
+		err := bcrypt.CompareHashAndPassword([]byte(globalHash), []byte(pw))
 		return err == nil
 	}
 	return false

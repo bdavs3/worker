@@ -1,4 +1,4 @@
-package services
+package client
 
 import (
 	"bytes"
@@ -26,33 +26,33 @@ import (
 
 const (
 	host    = "http://localhost:8080"
-	timeout = 5
+	timeout = 5 * time.Second
 )
 
-// JobService contains a BaseURL to prepend to API endpoints and an HTTPClient
+// Client contains a BaseURL to prepend to API endpoints and an HTTPClient
 // for making requests to those endpoints.
-type JobService struct {
+type Client struct {
 	BaseURL    string
 	HTTPClient *http.Client
 }
 
-// NewJobService creates a JobService struct with a default BaseURL and HTTPClient.
-func NewJobService() *JobService {
-	return &JobService{
+// NewClient creates a Client struct with a default BaseURL and HTTPClient.
+func NewClient() *Client {
+	return &Client{
 		BaseURL:    host,
-		HTTPClient: &http.Client{Timeout: timeout * time.Second},
+		HTTPClient: &http.Client{Timeout: timeout},
 	}
 }
 
 // PostJob passes a job to the worker library for execution.
-func (js *JobService) PostJob(c *cli.Context) error {
-	if c.NArg() == 0 {
+func (c *Client) PostJob(ctx *cli.Context) error {
+	if ctx.NArg() == 0 {
 		return errors.New("No job supplied to 'run' command")
 	}
 
 	job := worker.Job{
-		Command: c.Args().Get(0),
-		Args:    c.Args().Slice()[1:],
+		Command: ctx.Args().Get(0),
+		Args:    ctx.Args().Slice()[1:],
 	}
 
 	requestBody, err := json.Marshal(job)
@@ -60,7 +60,7 @@ func (js *JobService) PostJob(c *cli.Context) error {
 		return err
 	}
 
-	responseBody, err := js.makeRequestWithAuth(
+	responseBody, err := c.makeRequestWithAuth(
 		http.MethodPost,
 		"/jobs/run",
 		bytes.NewBuffer(requestBody),
@@ -75,14 +75,14 @@ func (js *JobService) PostJob(c *cli.Context) error {
 }
 
 // GetJobStatus queries the status of a job being handled by the worker library.
-func (js *JobService) GetJobStatus(c *cli.Context) error {
-	if c.NArg() != 1 {
+func (c *Client) GetJobStatus(ctx *cli.Context) error {
+	if ctx.NArg() != 1 {
 		return errors.New("No job ID supplied to 'status' command")
 	}
 
-	jobID := c.Args().Get(0)
+	jobID := ctx.Args().Get(0)
 
-	responseBody, err := js.makeRequestWithAuth(
+	responseBody, err := c.makeRequestWithAuth(
 		http.MethodGet,
 		fmt.Sprintf("/jobs/%s/status", jobID),
 		nil,
@@ -97,14 +97,14 @@ func (js *JobService) GetJobStatus(c *cli.Context) error {
 }
 
 // GetJobOutput queries the output of a job being handled by the worker library.
-func (js *JobService) GetJobOutput(c *cli.Context) error {
-	if c.NArg() != 1 {
+func (c *Client) GetJobOutput(ctx *cli.Context) error {
+	if ctx.NArg() != 1 {
 		return errors.New("No job ID supplied to 'out' command")
 	}
 
-	jobID := c.Args().Get(0)
+	jobID := ctx.Args().Get(0)
 
-	responseBody, err := js.makeRequestWithAuth(
+	responseBody, err := c.makeRequestWithAuth(
 		http.MethodGet,
 		fmt.Sprintf("/jobs/%s/out", jobID),
 		nil,
@@ -119,14 +119,14 @@ func (js *JobService) GetJobOutput(c *cli.Context) error {
 }
 
 // KillJob terminates a job being handled by the worker library.
-func (js *JobService) KillJob(c *cli.Context) error {
-	if c.NArg() != 1 {
+func (c *Client) KillJob(ctx *cli.Context) error {
+	if ctx.NArg() != 1 {
 		return errors.New("No job ID supplied to 'kill' command")
 	}
 
-	jobID := c.Args().Get(0)
+	jobID := ctx.Args().Get(0)
 
-	responseBody, err := js.makeRequestWithAuth(
+	responseBody, err := c.makeRequestWithAuth(
 		http.MethodPut,
 		fmt.Sprintf("/jobs/%s/kill", jobID),
 		nil,
@@ -143,15 +143,15 @@ func (js *JobService) KillJob(c *cli.Context) error {
 // makeRequestWithAuth makes an HTTP request to a given endpoint after setting
 // the request's Authorization header. It reads the response body and returns
 // it as a string.
-func (js *JobService) makeRequestWithAuth(method, endpoint string, requestBody io.Reader) (string, error) {
-	req, err := http.NewRequest(method, js.BaseURL+endpoint, requestBody)
+func (c *Client) makeRequestWithAuth(method, endpoint string, requestBody io.Reader) (string, error) {
+	req, err := http.NewRequest(method, c.BaseURL+endpoint, requestBody)
 	if err != nil {
 		return "", err
 	}
 
 	req.SetBasicAuth(os.Getenv("username"), os.Getenv("pw"))
 
-	resp, err := js.HTTPClient.Do(req)
+	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
 		return "", err
 	}

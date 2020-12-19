@@ -37,7 +37,7 @@ func TestAPIRequest(t *testing.T) {
 		t.Run(test.comment, func(t *testing.T) {
 			requestBody, err := json.Marshal(test.job)
 			if err != nil {
-				t.Error("Error marshalling job as JSON.")
+				t.Errorf("Error marshalling job as JSON: %v", err)
 			}
 
 			req, err := http.NewRequest(
@@ -46,14 +46,14 @@ func TestAPIRequest(t *testing.T) {
 				bytes.NewBuffer(requestBody),
 			)
 			if err != nil {
-				t.Error("Error forming request.")
+				t.Errorf("Error forming request: %v", err)
 			}
 
 			client := &http.Client{Timeout: 5 * time.Second}
 
 			resp, err := client.Do(req)
 			if err != nil {
-				t.Error("Did not receive response before timeout.")
+				t.Errorf("Did not receive response before timeout: %v", err)
 			}
 
 			defer resp.Body.Close()

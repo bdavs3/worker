@@ -13,8 +13,8 @@ import (
 // TODO (next): Only allow users to access endpoints for jobs they created.
 
 const (
-	globalUsername = "default_user"
-	globalHash     = "$2a$10$P7GoVlD0fEu14OWE76dGzude2NLw0pi05Gzar6rm1b.oD04lcvyaq"
+	storedUsername = "default_user"
+	storedHash     = "$2a$10$P7GoVlD0fEu14OWE76dGzude2NLw0pi05Gzar6rm1b.oD04lcvyaq"
 )
 
 // TODO (out of scope): The userLimiter map should be cleaned up
@@ -56,8 +56,8 @@ func validate(username, pw string) bool {
 	// TODO (out of scope): Store user credentials in a secure database and
 	// validate request Authorization headers against them. It is critical
 	// that passwords are hashed before storage in the database.
-	if username == globalUsername {
-		err := bcrypt.CompareHashAndPassword([]byte(globalHash), []byte(pw))
+	if username == storedUsername {
+		err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(pw))
 		return err == nil
 	}
 	return false

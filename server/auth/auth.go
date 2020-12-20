@@ -5,7 +5,6 @@ import (
 	"net/http"
 	"sync"
 
-	"github.com/gorilla/mux"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/time/rate"
 )
@@ -54,14 +53,14 @@ func Secure(handler http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		if !(r.Method == http.MethodPost) {
-			id := mux.Vars(r)["id"]
-			if !isOwner(username, id) {
-				w.WriteHeader(http.StatusForbidden)
-				w.Write([]byte("Forbidden resource."))
-				return
-			}
-		}
+		// if !(r.Method == http.MethodPost) {
+		// 	id := mux.Vars(r)["id"]
+		// 	if !isOwner(username, id) {
+		// 		w.WriteHeader(http.StatusForbidden)
+		// 		w.Write([]byte("Forbidden resource."))
+		// 		return
+		// 	}
+		// }
 
 		handler(w, r)
 	}

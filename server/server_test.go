@@ -6,15 +6,14 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
-	"time"
 
+	"github.com/bdavs3/worker/server/api"
 	"github.com/bdavs3/worker/worker"
 )
 
 func TestAPIRequest(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(postJob))
-
-	defer ts.Close()
+	dummyWorker := &worker.DummyWorker{}
+	handler := api.NewHandler(dummyWorker)
 
 	var tests = []struct {
 		comment string
@@ -34,6 +33,8 @@ func TestAPIRequest(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		rec := httptest.NewRecorder()
+
 		t.Run(test.comment, func(t *testing.T) {
 			requestBody, err := json.Marshal(test.job)
 			if err != nil {
@@ -42,24 +43,17 @@ func TestAPIRequest(t *testing.T) {
 
 			req, err := http.NewRequest(
 				http.MethodPost,
-				ts.URL,
+				"/jobs/run",
 				bytes.NewBuffer(requestBody),
 			)
 			if err != nil {
 				t.Errorf("Error forming request: %v", err)
 			}
 
-			client := &http.Client{Timeout: 5 * time.Second}
+			http.HandlerFunc(handler.PostJob).ServeHTTP(rec, req)
 
-			resp, err := client.Do(req)
-			if err != nil {
-				t.Errorf("Did not receive response before timeout: %v", err)
-			}
-
-			defer resp.Body.Close()
-
-			if resp.StatusCode != test.want {
-				t.Errorf("got %d, want %d", resp.StatusCode, test.want)
+			if rec.Code != test.want {
+				t.Errorf("got %d, want %d", rec.Code, test.want)
 			}
 		})
 	}

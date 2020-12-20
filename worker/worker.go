@@ -1,5 +1,7 @@
 package worker
 
+import "fmt"
+
 // TODO (next): Execute jobs passed to this library concurrently using
 // goroutines. Keep track of job execution in a log stored in memory,
 // ensuring that access to this log is synchronized but does not cause
@@ -12,8 +14,8 @@ type Job struct {
 }
 
 // Run will initiate the execution of a Linux process.
-func Run(job Job) Job {
-	return job
+func Run(job Job) string {
+	return fmt.Sprint(5) // TODO (next): Return a UUID/GUID.
 }
 
 // Status will query the log for the status of a given process.

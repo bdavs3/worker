@@ -21,15 +21,15 @@ const (
 func main() {
 	router := mux.NewRouter()
 
-	router.HandleFunc("/jobs/run", postJob).Methods(http.MethodPost)
-	router.HandleFunc("/jobs/{id:"+idRegex+"}/status", getJobStatus).Methods(http.MethodGet)
-	router.HandleFunc("/jobs/{id:"+idRegex+"}/out", getJobOutput).Methods(http.MethodGet)
-	router.HandleFunc("/jobs/{id:"+idRegex+"}/kill", killJob).Methods(http.MethodPut)
+	router.HandleFunc("/jobs/run", auth.Secure(postJob)).Methods(http.MethodPost)
+	router.HandleFunc("/jobs/{id:"+idRegex+"}/status", auth.Secure(getJobStatus)).Methods(http.MethodGet)
+	router.HandleFunc("/jobs/{id:"+idRegex+"}/out", auth.Secure(getJobOutput)).Methods(http.MethodGet)
+	router.HandleFunc("/jobs/{id:"+idRegex+"}/kill", auth.Secure(killJob)).Methods(http.MethodPut)
 
 	fmt.Println("Listening...")
 	// TODO (next): ListenAndServeTLS by using a pre-generated private key
 	// and self-signed certificate located inside the repository.
-	http.ListenAndServe(":"+port, auth.Secure(router))
+	http.ListenAndServe(":"+port, router)
 }
 
 func postJob(w http.ResponseWriter, r *http.Request) {
@@ -48,9 +48,14 @@ func postJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	id := worker.Run(job)
+	if username, _, ok := r.BasicAuth(); ok {
+		auth.SetJobOwnership(username, id)
+	}
+
 	// TODO (next): Rather than echoing the job back to the client, respond with
 	// the unique ID assigned to the job.
-	err = json.NewEncoder(w).Encode(worker.Run(job))
+	fmt.Fprint(w, id)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("Unable to complete request."))

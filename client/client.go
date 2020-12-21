@@ -36,7 +36,7 @@ type Client struct {
 	HTTPClient *http.Client
 }
 
-// NewClient creates a Client struct with a default BaseURL and HTTPClient.
+// NewClient initializes a Client struct with a default BaseURL and HTTPClient.
 func NewClient() *Client {
 	return &Client{
 		BaseURL:    host,

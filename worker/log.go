@@ -25,6 +25,9 @@ func NewLog() *Log {
 }
 
 func (log *Log) addEntry(id string) {
+	log.mu.Lock()
+	defer log.mu.Unlock()
+
 	log.entries[id] = &logEntry{status: "active", output: ""}
 }
 

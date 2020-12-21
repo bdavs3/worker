@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/bdavs3/worker/server/auth"
 	"github.com/bdavs3/worker/worker"
 
 	"github.com/gorilla/mux"
@@ -44,12 +43,7 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := h.Worker.Run(job)
-	if username, _, ok := r.BasicAuth(); ok {
-		auth.SetJobOwnership(username, id)
-	}
 
-	// TODO (next): Rather than echoing the job back to the client, respond with
-	// the unique ID assigned to the job.
 	fmt.Fprint(w, id)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

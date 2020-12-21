@@ -23,12 +23,6 @@ const (
 var userLimiters = make(map[string]*rate.Limiter)
 var mu sync.Mutex
 
-// Usernames map to another map from ID to the empty struct, which is
-// treated as a set. It is easy to check whether the second map contains
-// a given ID inline, and the empty struct takes no space in memory.
-var userOwnedJobs = make(map[string]map[string]struct{})
-var mu2 sync.Mutex
-
 // Secure enforces user authentication and rate limiting before allowing a
 // request to reach a given endpoint.
 func Secure(handler http.HandlerFunc) http.HandlerFunc {
@@ -52,15 +46,6 @@ func Secure(handler http.HandlerFunc) http.HandlerFunc {
 			w.Write([]byte("Forbidden non-local request."))
 			return
 		}
-
-		// if !(r.Method == http.MethodPost) {
-		// 	id := mux.Vars(r)["id"]
-		// 	if !isOwner(username, id) {
-		// 		w.WriteHeader(http.StatusForbidden)
-		// 		w.Write([]byte("Forbidden resource."))
-		// 		return
-		// 	}
-		// }
 
 		handler(w, r)
 	}
@@ -129,30 +114,4 @@ func isLocalRequest(r *http.Request) (bool, error) {
 	}
 
 	return false, nil
-}
-
-func isOwner(username, id string) bool {
-	mu2.Lock()
-	defer mu2.Unlock()
-
-	if _, ok := userOwnedJobs[username][id]; ok {
-		return true
-	}
-
-	return false
-}
-
-// SetJobOwnership associates a job resource with a user, thereby restricting
-// other users from accessing the job's endpoint.
-func SetJobOwnership(username, id string) {
-	mu2.Lock()
-	defer mu2.Unlock()
-
-	_, exists := userOwnedJobs[username]
-	if !exists {
-		userOwnedJobs[username] = map[string]struct{}{id: {}}
-		return
-	}
-
-	userOwnedJobs[username][id] = struct{}{}
 }

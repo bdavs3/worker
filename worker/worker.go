@@ -6,11 +6,6 @@ import (
 	"github.com/lithammer/shortuuid"
 )
 
-// TODO (next): Execute jobs passed to this library concurrently using
-// goroutines. Keep track of job execution in a log stored in memory,
-// ensuring that access to this log is synchronized but does not cause
-// deadlock. Allow active processes to be terminated.
-
 // JobWorker implements methods to run/terminate Linux processes and
 // query their output/status.
 type JobWorker interface {
@@ -21,7 +16,7 @@ type JobWorker interface {
 }
 
 // DummyWorker implements the JobWorker interface so that the API can be tested
-// independent of any configuration.
+// independently.
 type DummyWorker struct{}
 
 func (dw *DummyWorker) Run(id chan string, job Job)      {}
@@ -29,12 +24,12 @@ func (dw *DummyWorker) Status(id string) (string, error) { return "", nil }
 func (dw *DummyWorker) Out(id string) (string, error)    { return "", nil }
 func (dw *DummyWorker) Kill(id string) string            { return "" }
 
-// Worker is a JobWorker that
+// Worker is a JobWorker containing a log for the status/output of jobs.
 type Worker struct {
 	log *Log
 }
 
-// NewWorker initalizes a worker with the provided log.
+// NewWorker returns a Worker containing a new log.
 func NewWorker() *Worker {
 	return &Worker{
 		log: NewLog(),
@@ -47,7 +42,7 @@ type Job struct {
 	Args    []string `json:"args"`
 }
 
-// Run will initiate the execution of a Linux process.
+// Run initiates the execution of a Linux process.
 func (w *Worker) Run(id chan string, job Job) {
 	jobID := shortuuid.New()
 	w.log.addEntry(jobID)
@@ -63,7 +58,7 @@ func (w *Worker) Run(id chan string, job Job) {
 	w.log.setStatus(jobID, "finished")
 }
 
-// Status will query the log for the status of a given process.
+// Status queries the log for the status of a given process.
 func (w *Worker) Status(id string) (string, error) {
 	status, err := w.log.getStatus(id)
 	if err != nil {
@@ -73,7 +68,7 @@ func (w *Worker) Status(id string) (string, error) {
 	return status, nil
 }
 
-// Out will query the log for the output of a given process.
+// Out queries the log for the output of a given process.
 func (w *Worker) Out(id string) (string, error) {
 	output, err := w.log.getOutput(id)
 	if err != nil {

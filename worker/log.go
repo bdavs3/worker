@@ -5,20 +5,19 @@ import (
 	"sync"
 )
 
-// Log contains a map with the status and output of various Linux processes,
-// each represented by a UUID.
+// Log contains a map that pairs jobs with their status and output.
 type Log struct {
 	entries map[string]*logEntry
 	mu      sync.RWMutex
 }
 
-// LogEntry is a struct containing the status and output of a process.
+// logEntry is a struct containing the status and output of a process.
 type logEntry struct {
 	status string
 	output string
 }
 
-// NewLog initializes a log with an empty map of Linux processes.
+// NewLog returns a log containing an initialized job entry map.
 func NewLog() *Log {
 	return &Log{
 		entries: make(map[string]*logEntry),

@@ -76,10 +76,9 @@ func getUserLimiter(username string) *rate.Limiter {
 }
 
 func isLocalRequest(r *http.Request) (bool, error) {
-	// TODO (out of scope): Getting the network address of the request using
-	// RemoteAddr will introduce problems if the request is passed thorugh a
-	// proxy or load balancer, for example, and is something that would need
-	// to be accounted for in this function.
+	// TODO (out of scope): Getting the network address of requests using
+	// RemoteAddr will unreliable they are first passed through a proxy or
+	// load balancer. This should be taken into considereation.
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
 	if err != nil {
 		return false, err

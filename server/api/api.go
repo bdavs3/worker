@@ -11,13 +11,12 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Handler implements API methods for invoking the various capabilities
-// of the worker it contains.
+// Handler implements methods leveraging the worker it contains.
 type Handler struct {
 	Worker worker.JobWorker
 }
 
-// NewHandler initializes a Handler with the provided worker.
+// NewHandler returns a Handler with the provided JobWorker.
 func NewHandler(worker worker.JobWorker) *Handler {
 	return &Handler{
 		Worker: worker,
@@ -25,7 +24,7 @@ func NewHandler(worker worker.JobWorker) *Handler {
 }
 
 // PostJob initiates the worker's execution of the job contained in the
-// request and if successful, responds with the unique id assigned to that job.
+// request and if successful, responds with the id assigned to that job.
 func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -48,8 +47,7 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, <-id)
 }
 
-// GetJobStatus queries the worker's log to respond with the status of
-// the given job.
+// GetJobStatus responds with the status of the given job.
 func (h *Handler) GetJobStatus(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
@@ -62,8 +60,7 @@ func (h *Handler) GetJobStatus(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, status)
 }
 
-// GetJobOutput queries the worker's log to respond with the output of
-// the given job.
+// GetJobOutput responds with the output of the given job.
 func (h *Handler) GetJobOutput(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
@@ -76,8 +73,7 @@ func (h *Handler) GetJobOutput(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, output)
 }
 
-// KillJob initiates the termination of a given job and if successful,
-// responds with the new status of the job.
+// KillJob terminates a given job and responds with its new status.
 func (h *Handler) KillJob(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 	fmt.Fprint(w, h.Worker.Kill(id))

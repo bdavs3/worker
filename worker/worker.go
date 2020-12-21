@@ -13,17 +13,19 @@ type JobWorker interface {
 	Run(id chan<- string, job Job)
 	Status(id string) (string, error)
 	Out(id string) (string, error)
-	Kill(result chan<- string, id string)
+	Kill(result chan<- KillResult, id string)
 }
 
 // DummyWorker implements the JobWorker interface so that the API can be tested
 // independently.
 type DummyWorker struct{}
 
-func (dw *DummyWorker) Run(id chan<- string, job Job)        { id <- "" }
-func (dw *DummyWorker) Status(id string) (string, error)     { return "", nil }
-func (dw *DummyWorker) Out(id string) (string, error)        { return "", nil }
-func (dw *DummyWorker) Kill(result chan<- string, id string) { result <- "" }
+func (dw *DummyWorker) Run(id chan<- string, job Job)    { id <- "" }
+func (dw *DummyWorker) Status(id string) (string, error) { return "", nil }
+func (dw *DummyWorker) Out(id string) (string, error)    { return "", nil }
+func (dw *DummyWorker) Kill(result chan<- KillResult, id string) {
+	result <- KillResult{"", nil}
+}
 
 // Worker is a JobWorker containing a log for the status/output of jobs.
 type Worker struct {
@@ -52,11 +54,11 @@ func (w *Worker) Run(id chan<- string, job Job) {
 	ctx, cancel := context.WithCancel(context.Background())
 	w.log.addEntry(jobID, cancel)
 
-	// TODO (next): Block on jobs requiring stdin.
+	// TODO (next): Block on jobs requiring stdin and capture their output.
 	out, err := exec.CommandContext(ctx, job.Command, job.Args...).Output()
 	w.log.setOutput(jobID, string(out))
 	if err != nil {
-		w.log.setStatus(jobID, err.Error())
+		w.log.setStatus(jobID, "Error - "+err.Error())
 		return
 	}
 
@@ -83,14 +85,21 @@ func (w *Worker) Out(id string) (string, error) {
 	return output, nil
 }
 
-// Kill will terminate a given process.
-func (w *Worker) Kill(result chan<- string, id string) {
+// KillResult contains a message indicated whether a process was killed and
+// any error that occured during termination.
+type KillResult struct {
+	Message string
+	Err     error
+}
+
+// Kill terminates a given process.
+func (w *Worker) Kill(result chan<- KillResult, id string) {
 	cancel, err := w.log.getCancelFunc(id)
 	if err != nil {
-		result <- err.Error()
+		result <- KillResult{"", err}
 	}
 
 	cancel()
 
-	result <- "killed"
+	result <- KillResult{"killed", nil}
 }

@@ -77,8 +77,20 @@ func (h *Handler) GetJobOutput(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) KillJob(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
-	result := make(chan string)
+	result := make(chan worker.KillResult)
 	go h.Worker.Kill(result, id)
 
-	fmt.Fprint(w, <-result)
+	killResult := <-result
+	if err := killResult.Err; err != nil {
+		switch err.(type) {
+		case *worker.NotActiveErr:
+			w.WriteHeader(http.StatusConflict)
+			w.Write([]byte(err.Error()))
+		case *worker.NotFoundErr:
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(err.Error()))
+		}
+	}
+
+	fmt.Fprint(w, killResult.Message)
 }

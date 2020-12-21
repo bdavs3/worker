@@ -2,7 +2,6 @@ package worker
 
 import (
 	"context"
-	"errors"
 	"sync"
 )
 
@@ -25,6 +24,17 @@ func NewLog() *Log {
 		entries: make(map[string]*logEntry),
 	}
 }
+
+// NotFoundErr occurs when a job cannot be found in the worker log.
+type NotFoundErr struct{ msg string }
+
+func (e *NotFoundErr) Error() string { return e.msg }
+
+// NotActiveErr occurs when termination is attempted on a job that
+// doesn't exist.
+type NotActiveErr struct{ msg string }
+
+func (e *NotActiveErr) Error() string { return e.msg }
 
 func (log *Log) addEntry(id string, cancel context.CancelFunc) {
 	log.mu.Lock()
@@ -80,7 +90,7 @@ func (log *Log) getCancelFunc(id string) (func(), error) {
 		return func() {}, err
 	}
 	if entry.status != "active" {
-		return func() {}, errors.New("job not active")
+		return func() {}, &NotActiveErr{"job not active"}
 	}
 
 	return entry.cancel, nil
@@ -89,7 +99,7 @@ func (log *Log) getCancelFunc(id string) (func(), error) {
 func (log *Log) getEntry(id string) (*logEntry, error) {
 	entry, ok := log.entries[id]
 	if !ok {
-		return &logEntry{}, errors.New("job not found")
+		return &logEntry{}, &NotFoundErr{"job not found"}
 	}
 
 	return entry, nil

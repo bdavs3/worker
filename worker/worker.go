@@ -9,7 +9,7 @@ import (
 // JobWorker implements methods to run/terminate Linux processes and
 // query their output/status.
 type JobWorker interface {
-	Run(id chan string, job Job)
+	Run(id chan<- string, job Job)
 	Status(id string) (string, error)
 	Out(id string) (string, error)
 	Kill(id string) string
@@ -19,7 +19,7 @@ type JobWorker interface {
 // independently.
 type DummyWorker struct{}
 
-func (dw *DummyWorker) Run(id chan string, job Job)      {}
+func (dw *DummyWorker) Run(id chan<- string, job Job)    {}
 func (dw *DummyWorker) Status(id string) (string, error) { return "", nil }
 func (dw *DummyWorker) Out(id string) (string, error)    { return "", nil }
 func (dw *DummyWorker) Kill(id string) string            { return "" }
@@ -43,7 +43,7 @@ type Job struct {
 }
 
 // Run initiates the execution of a Linux process.
-func (w *Worker) Run(id chan string, job Job) {
+func (w *Worker) Run(id chan<- string, job Job) {
 	jobID := shortuuid.New()
 	w.log.addEntry(jobID)
 	id <- jobID

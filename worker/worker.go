@@ -20,21 +20,14 @@ type JobWorker interface {
 	Kill(id string) string
 }
 
-// DummyWorker is a JobWorker that can be passed to a handler in order
-// to test the API independently.
+// DummyWorker implements the JobWorker interface so that the API can be tested
+// independent of any configuration.
 type DummyWorker struct{}
 
-// Run simply ensures that DummyWorker implements the JobWorker interface.
-func (dw *DummyWorker) Run(id chan string, job Job) {}
-
-// Status simply ensures that DummyWorker implements the JobWorker interface.
+func (dw *DummyWorker) Run(id chan string, job Job)      {}
 func (dw *DummyWorker) Status(id string) (string, error) { return "", nil }
-
-// Out simply ensures that DummyWorker implements the JobWorker interface.
-func (dw *DummyWorker) Out(id string) (string, error) { return "", nil }
-
-// Kill simply ensures that DummyWorker implements the JobWorker interface.
-func (dw *DummyWorker) Kill(id string) string { return "" }
+func (dw *DummyWorker) Out(id string) (string, error)    { return "", nil }
+func (dw *DummyWorker) Kill(id string) string            { return "" }
 
 // Worker is a JobWorker that
 type Worker struct {

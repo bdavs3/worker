@@ -54,7 +54,7 @@ func (w *Worker) Run(id chan<- string, job Job) {
 	ctx, cancel := context.WithCancel(context.Background())
 	w.log.addEntry(jobID, cancel)
 
-	// TODO (next): Block on jobs requiring stdin and capture their output.
+	// TODO (next): Block on jobs requiring stdin, but still capture their output.
 	out, err := exec.CommandContext(ctx, job.Command, job.Args...).Output()
 	w.log.setOutput(jobID, string(out))
 	if err != nil {
@@ -85,8 +85,8 @@ func (w *Worker) Out(id string) (string, error) {
 	return output, nil
 }
 
-// KillResult contains a message indicated whether a process was killed and
-// any error that occured during termination.
+// KillResult contains a message indicating whether a process was killed and
+// an error that may have occured during termination.
 type KillResult struct {
 	Message string
 	Err     error

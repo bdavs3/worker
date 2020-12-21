@@ -18,7 +18,7 @@ type logEntry struct {
 	cancel context.CancelFunc
 }
 
-// NewLog returns a log containing an initialized job entry map.
+// NewLog returns a log containing an initialized entry map.
 func NewLog() *Log {
 	return &Log{
 		entries: make(map[string]*logEntry),
@@ -90,7 +90,7 @@ func (log *Log) getCancelFunc(id string) (func(), error) {
 		return func() {}, err
 	}
 	if entry.status != "active" {
-		return func() {}, &NotActiveErr{"job not active"}
+		return func() {}, &NotActiveErr{"Job not active."}
 	}
 
 	return entry.cancel, nil
@@ -99,7 +99,7 @@ func (log *Log) getCancelFunc(id string) (func(), error) {
 func (log *Log) getEntry(id string) (*logEntry, error) {
 	entry, ok := log.entries[id]
 	if !ok {
-		return &logEntry{}, &NotFoundErr{"job not found"}
+		return &logEntry{}, &NotFoundErr{"Job not found."}
 	}
 
 	return entry, nil

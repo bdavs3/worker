@@ -23,8 +23,8 @@ const (
 var userLimiters = make(map[string]*rate.Limiter)
 var mu sync.Mutex
 
-// Secure enforces user authentication and rate limiting before allowing a
-// request to reach a given endpoint.
+// Secure enforces user authentication, rate limiting, and a local-only
+// request policy before allowing a request to reach a given endpoint.
 func Secure(handler http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		username, pw, ok := r.BasicAuth()

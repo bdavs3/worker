@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"os/exec"
 
 	"github.com/lithammer/shortuuid"
@@ -12,17 +13,17 @@ type JobWorker interface {
 	Run(id chan<- string, job Job)
 	Status(id string) (string, error)
 	Out(id string) (string, error)
-	Kill(id string) string
+	Kill(result chan<- string, id string)
 }
 
 // DummyWorker implements the JobWorker interface so that the API can be tested
 // independently.
 type DummyWorker struct{}
 
-func (dw *DummyWorker) Run(id chan<- string, job Job)    {}
-func (dw *DummyWorker) Status(id string) (string, error) { return "", nil }
-func (dw *DummyWorker) Out(id string) (string, error)    { return "", nil }
-func (dw *DummyWorker) Kill(id string) string            { return "" }
+func (dw *DummyWorker) Run(id chan<- string, job Job)        { id <- "" }
+func (dw *DummyWorker) Status(id string) (string, error)     { return "", nil }
+func (dw *DummyWorker) Out(id string) (string, error)        { return "", nil }
+func (dw *DummyWorker) Kill(result chan<- string, id string) { result <- "" }
 
 // Worker is a JobWorker containing a log for the status/output of jobs.
 type Worker struct {
@@ -45,16 +46,20 @@ type Job struct {
 // Run initiates the execution of a Linux process.
 func (w *Worker) Run(id chan<- string, job Job) {
 	jobID := shortuuid.New()
-	w.log.addEntry(jobID)
 	id <- jobID
 
-	out, err := exec.Command(job.Command, job.Args...).Output()
+	// TODO (next): Consider storing cancel funcs separately from the log.
+	ctx, cancel := context.WithCancel(context.Background())
+	w.log.addEntry(jobID, cancel)
+
+	// TODO (next): Block on jobs requiring stdin.
+	out, err := exec.CommandContext(ctx, job.Command, job.Args...).Output()
+	w.log.setOutput(jobID, string(out))
 	if err != nil {
 		w.log.setStatus(jobID, err.Error())
 		return
 	}
 
-	w.log.setOutput(jobID, string(out))
 	w.log.setStatus(jobID, "finished")
 }
 
@@ -79,6 +84,13 @@ func (w *Worker) Out(id string) (string, error) {
 }
 
 // Kill will terminate a given process.
-func (w *Worker) Kill(id string) string {
-	return "Killing job " + id
+func (w *Worker) Kill(result chan<- string, id string) {
+	cancel, err := w.log.getCancelFunc(id)
+	if err != nil {
+		result <- err.Error()
+	}
+
+	cancel()
+
+	result <- "killed"
 }

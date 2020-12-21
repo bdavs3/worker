@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"context"
 	"errors"
 	"sync"
 )
@@ -15,6 +16,7 @@ type Log struct {
 type logEntry struct {
 	status string
 	output string
+	cancel context.CancelFunc
 }
 
 // NewLog returns a log containing an initialized job entry map.
@@ -24,11 +26,11 @@ func NewLog() *Log {
 	}
 }
 
-func (log *Log) addEntry(id string) {
+func (log *Log) addEntry(id string, cancel context.CancelFunc) {
 	log.mu.Lock()
 	defer log.mu.Unlock()
 
-	log.entries[id] = &logEntry{status: "active", output: ""}
+	log.entries[id] = &logEntry{status: "active", output: "", cancel: cancel}
 }
 
 func (log *Log) setStatus(id, status string) {
@@ -42,11 +44,12 @@ func (log *Log) getStatus(id string) (string, error) {
 	log.mu.RLock()
 	defer log.mu.RUnlock()
 
-	if entry, ok := log.entries[id]; ok {
-		return entry.status, nil
+	entry, err := log.getEntry(id)
+	if err != nil {
+		return "", err
 	}
 
-	return "", errors.New("job not found")
+	return entry.status, nil
 }
 
 func (log *Log) setOutput(id, output string) {
@@ -60,9 +63,34 @@ func (log *Log) getOutput(id string) (string, error) {
 	log.mu.RLock()
 	defer log.mu.RUnlock()
 
-	if entry, ok := log.entries[id]; ok {
-		return entry.output, nil
+	entry, err := log.getEntry(id)
+	if err != nil {
+		return "", err
 	}
 
-	return "", errors.New("job not found")
+	return entry.output, nil
+}
+
+func (log *Log) getCancelFunc(id string) (func(), error) {
+	log.mu.RLock()
+	defer log.mu.RUnlock()
+
+	entry, err := log.getEntry(id)
+	if err != nil {
+		return func() {}, err
+	}
+	if entry.status != "active" {
+		return func() {}, errors.New("job not active")
+	}
+
+	return entry.cancel, nil
+}
+
+func (log *Log) getEntry(id string) (*logEntry, error) {
+	entry, ok := log.entries[id]
+	if !ok {
+		return &logEntry{}, errors.New("job not found")
+	}
+
+	return entry, nil
 }

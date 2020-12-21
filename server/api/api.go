@@ -76,5 +76,9 @@ func (h *Handler) GetJobOutput(w http.ResponseWriter, r *http.Request) {
 // KillJob terminates a given job and responds with its new status.
 func (h *Handler) KillJob(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	fmt.Fprint(w, h.Worker.Kill(id))
+
+	result := make(chan string)
+	go h.Worker.Kill(result, id)
+
+	fmt.Fprint(w, <-result)
 }

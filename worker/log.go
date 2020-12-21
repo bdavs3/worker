@@ -1,6 +1,9 @@
 package worker
 
-import "sync"
+import (
+	"errors"
+	"sync"
+)
 
 // Log contains a map with the status and output of various Linux processes,
 // each represented by a UUID.
@@ -33,11 +36,15 @@ func (log *Log) setStatus(id, status string) {
 	log.entries[id].status = status
 }
 
-func (log *Log) getStatus(id string) string {
+func (log *Log) getStatus(id string) (string, error) {
 	log.mu.RLock()
 	defer log.mu.RUnlock()
 
-	return log.entries[id].status
+	if entry, ok := log.entries[id]; ok {
+		return entry.status, nil
+	}
+
+	return "", errors.New("job not found")
 }
 
 func (log *Log) setOutput(id, output string) {
@@ -47,9 +54,13 @@ func (log *Log) setOutput(id, output string) {
 	log.entries[id].output = output
 }
 
-func (log *Log) getOutput(id string) string {
+func (log *Log) getOutput(id string) (string, error) {
 	log.mu.RLock()
 	defer log.mu.RUnlock()
 
-	return log.entries[id].output
+	if entry, ok := log.entries[id]; ok {
+		return entry.output, nil
+	}
+
+	return "", errors.New("job not found")
 }

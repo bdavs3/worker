@@ -42,27 +42,38 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := h.Worker.Run(job)
+	id := make(chan string)
+	go h.Worker.Run(id, job)
 
-	fmt.Fprint(w, id)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte("Unable to complete request."))
-	}
+	fmt.Fprint(w, <-id)
 }
 
 // GetJobStatus queries the worker's log to respond with the status of
 // the given job.
 func (h *Handler) GetJobStatus(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	fmt.Fprint(w, h.Worker.Status(id))
+
+	status, err := h.Worker.Status(id)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(err.Error()))
+	}
+
+	fmt.Fprint(w, status)
 }
 
 // GetJobOutput queries the worker's log to respond with the output of
 // the given job.
 func (h *Handler) GetJobOutput(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
-	fmt.Fprint(w, h.Worker.Out(id))
+
+	output, err := h.Worker.Out(id)
+	if err != nil {
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(err.Error()))
+	}
+
+	fmt.Fprint(w, output)
 }
 
 // KillJob initiates the termination of a given job and if successful,

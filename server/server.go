@@ -15,8 +15,7 @@ import (
 const port = "8080"
 
 func main() {
-	log := worker.NewLog()
-	worker := worker.NewWorker(log)
+	worker := worker.NewWorker()
 	handler := api.NewHandler(worker)
 
 	router := mux.NewRouter()

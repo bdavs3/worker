@@ -40,7 +40,7 @@ func (log *Log) addEntry(id string, cancel context.CancelFunc) {
 	log.mu.Lock()
 	defer log.mu.Unlock()
 
-	log.entries[id] = &logEntry{status: "active", output: "", cancel: cancel}
+	log.entries[id] = &logEntry{status: statusActive, output: "", cancel: cancel}
 }
 
 func (log *Log) setStatus(id, status string) {

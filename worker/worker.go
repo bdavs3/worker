@@ -7,6 +7,12 @@ import (
 	"github.com/lithammer/shortuuid"
 )
 
+const (
+	statusActive   = "active"
+	statusComplete = "complete"
+	statusKilled   = "killed"
+)
+
 // JobWorker implements methods to run/terminate Linux processes and
 // query their output/status.
 type JobWorker interface {
@@ -62,7 +68,7 @@ func (w *Worker) Run(id chan<- string, job Job) {
 		return
 	}
 
-	w.log.setStatus(jobID, "finished")
+	w.log.setStatus(jobID, statusComplete)
 }
 
 // Status queries the log for the status of a given process.
@@ -101,5 +107,5 @@ func (w *Worker) Kill(result chan<- KillResult, id string) {
 
 	cancel()
 
-	result <- KillResult{"killed", nil}
+	result <- KillResult{statusKilled, nil}
 }

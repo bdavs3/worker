@@ -19,7 +19,7 @@ type JobWorker interface {
 	Run(id chan<- string, job Job)
 	Status(id string) (string, error)
 	Out(id string) (string, error)
-	Kill(result chan<- KillResult, id string)
+	Kill(id string) (string, error)
 }
 
 // DummyWorker implements the JobWorker interface so that the API can be tested
@@ -29,9 +29,7 @@ type DummyWorker struct{}
 func (dw *DummyWorker) Run(id chan<- string, job Job)    { id <- "" }
 func (dw *DummyWorker) Status(id string) (string, error) { return "", nil }
 func (dw *DummyWorker) Out(id string) (string, error)    { return "", nil }
-func (dw *DummyWorker) Kill(result chan<- KillResult, id string) {
-	result <- KillResult{"", nil}
-}
+func (dw *DummyWorker) Kill(id string) (string, error)   { return "", nil }
 
 // Worker is a JobWorker containing a log for the status/output of jobs.
 type Worker struct {
@@ -99,13 +97,13 @@ type KillResult struct {
 }
 
 // Kill terminates a given process.
-func (w *Worker) Kill(result chan<- KillResult, id string) {
+func (w *Worker) Kill(id string) (string, error) {
 	cancel, err := w.log.getCancelFunc(id)
 	if err != nil {
-		result <- KillResult{"", err}
+		return "", err
 	}
 
 	cancel()
 
-	result <- KillResult{statusKilled, nil}
+	return statusKilled, nil
 }

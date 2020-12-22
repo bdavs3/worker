@@ -11,7 +11,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// Handler implements methods leveraging the worker it contains.
+// Handler is an HTTP handler that manages processes on behalf of clients.
 type Handler struct {
 	Worker worker.JobWorker
 }
@@ -41,7 +41,7 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := make(chan string)
+	id := make(chan string, 1)
 	go h.Worker.Run(id, job)
 
 	fmt.Fprint(w, <-id)
@@ -55,6 +55,7 @@ func (h *Handler) GetJobStatus(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte(err.Error()))
+		return
 	}
 
 	fmt.Fprint(w, status)
@@ -68,6 +69,7 @@ func (h *Handler) GetJobOutput(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusNotFound)
 		w.Write([]byte(err.Error()))
+		return
 	}
 
 	fmt.Fprint(w, output)
@@ -77,20 +79,20 @@ func (h *Handler) GetJobOutput(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) KillJob(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
-	result := make(chan worker.KillResult)
-	go h.Worker.Kill(result, id)
+	result, err := h.Worker.Kill(id)
 
-	killResult := <-result
-	if err := killResult.Err; err != nil {
+	if err != nil {
 		switch err.(type) {
 		case *worker.NotActiveErr:
 			w.WriteHeader(http.StatusConflict)
 			w.Write([]byte(err.Error()))
+			return
 		case *worker.NotFoundErr:
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte(err.Error()))
+			return
 		}
 	}
 
-	fmt.Fprint(w, killResult.Message)
+	fmt.Fprint(w, result)
 }

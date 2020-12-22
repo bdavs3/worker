@@ -54,7 +54,7 @@ func (log *Log) getStatus(id string) (string, error) {
 	log.mu.RLock()
 	defer log.mu.RUnlock()
 
-	entry, err := log.getEntry(id)
+	entry, err := log.getEntryLocked(id)
 	if err != nil {
 		return "", err
 	}
@@ -73,7 +73,7 @@ func (log *Log) getOutput(id string) (string, error) {
 	log.mu.RLock()
 	defer log.mu.RUnlock()
 
-	entry, err := log.getEntry(id)
+	entry, err := log.getEntryLocked(id)
 	if err != nil {
 		return "", err
 	}
@@ -85,7 +85,7 @@ func (log *Log) getCancelFunc(id string) (func(), error) {
 	log.mu.RLock()
 	defer log.mu.RUnlock()
 
-	entry, err := log.getEntry(id)
+	entry, err := log.getEntryLocked(id)
 	if err != nil {
 		return func() {}, err
 	}
@@ -96,7 +96,7 @@ func (log *Log) getCancelFunc(id string) (func(), error) {
 	return entry.cancel, nil
 }
 
-func (log *Log) getEntry(id string) (*logEntry, error) {
+func (log *Log) getEntryLocked(id string) (*logEntry, error) {
 	entry, ok := log.entries[id]
 	if !ok {
 		return &logEntry{}, &NotFoundErr{"Job not found."}

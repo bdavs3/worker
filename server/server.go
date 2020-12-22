@@ -11,8 +11,11 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// TODO (next): Change to 443 once serving with TLS.
-const port = "8080"
+const (
+	port    = "443"
+	crtFile = "../worker.crt"
+	keyFile = "../worker.key"
+)
 
 func main() {
 	worker := worker.NewWorker()
@@ -26,7 +29,5 @@ func main() {
 	router.HandleFunc("/jobs/{id}/kill", auth.Secure(handler.KillJob)).Methods(http.MethodPut)
 
 	fmt.Println("Listening...")
-	// TODO (next): ListenAndServeTLS by using a pre-generated private key
-	// and self-signed certificate located inside the repository.
-	http.ListenAndServe(":"+port, router)
+	http.ListenAndServeTLS(":"+port, crtFile, keyFile, router)
 }

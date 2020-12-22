@@ -2,7 +2,9 @@ package worker
 
 import (
 	"context"
+	"io"
 	"os/exec"
+	"sync"
 
 	"github.com/lithammer/shortuuid"
 )
@@ -19,7 +21,7 @@ type JobWorker interface {
 	Run(id chan<- string, job Job)
 	Status(id string) (string, error)
 	Out(id string) (string, error)
-	Kill(result chan<- KillResult, id string)
+	Kill(id string) (string, error)
 }
 
 // DummyWorker implements the JobWorker interface so that the API can be tested
@@ -29,9 +31,7 @@ type DummyWorker struct{}
 func (dw *DummyWorker) Run(id chan<- string, job Job)    { id <- "" }
 func (dw *DummyWorker) Status(id string) (string, error) { return "", nil }
 func (dw *DummyWorker) Out(id string) (string, error)    { return "", nil }
-func (dw *DummyWorker) Kill(result chan<- KillResult, id string) {
-	result <- KillResult{"", nil}
-}
+func (dw *DummyWorker) Kill(id string) (string, error)   { return "", nil }
 
 // Worker is a JobWorker containing a log for the status/output of jobs.
 type Worker struct {
@@ -58,17 +58,45 @@ func (w *Worker) Run(id chan<- string, job Job) {
 
 	// TODO (next): Consider storing cancel funcs separately from the log.
 	ctx, cancel := context.WithCancel(context.Background())
+
+	// TODO (next): Block on jobs requiring stdin.
+	cmd := exec.CommandContext(ctx, job.Command, job.Args...)
+	stdout, _ := cmd.StdoutPipe()
 	w.log.addEntry(jobID, cancel)
 
-	// TODO (next): Block on jobs requiring stdin, but still capture their output.
-	out, err := exec.CommandContext(ctx, job.Command, job.Args...).Output()
-	w.log.setOutput(jobID, string(out))
-	if err != nil {
-		w.log.setStatus(jobID, "Error - "+err.Error())
-		return
-	}
+	cmd.Start()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		pipeToOutput(w.log, jobID, stdout)
+		wg.Done()
+	}()
+	wg.Wait()
+
+	cmd.Wait()
 
 	w.log.setStatus(jobID, statusComplete)
+}
+
+func pipeToOutput(log *Log, id string, r io.Reader) error {
+	output := make([]byte, 1024, 1024)
+	for {
+		n, err := r.Read(output)
+		if n > 0 {
+			err = log.appendOutput(id, output)
+			if err != nil {
+				return err
+			}
+		}
+		if err != nil {
+			// The EOF error is ok since it simply means the reader has closed.
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+	}
 }
 
 // Status queries the log for the status of a given process.
@@ -83,12 +111,12 @@ func (w *Worker) Status(id string) (string, error) {
 
 // Out queries the log for the output of a given process.
 func (w *Worker) Out(id string) (string, error) {
-	output, err := w.log.getOutput(id)
+	out, err := w.log.getOutput(id)
 	if err != nil {
 		return "", err
 	}
 
-	return output, nil
+	return out, nil
 }
 
 // KillResult contains a message indicating whether a process was killed and
@@ -99,13 +127,13 @@ type KillResult struct {
 }
 
 // Kill terminates a given process.
-func (w *Worker) Kill(result chan<- KillResult, id string) {
+func (w *Worker) Kill(id string) (string, error) {
 	cancel, err := w.log.getCancelFunc(id)
 	if err != nil {
-		result <- KillResult{"", err}
+		return "", err
 	}
 
 	cancel()
 
-	result <- KillResult{statusKilled, nil}
+	return statusKilled, nil
 }

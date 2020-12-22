@@ -2,7 +2,9 @@ package worker
 
 import (
 	"context"
+	"io"
 	"os/exec"
+	"sync"
 
 	"github.com/lithammer/shortuuid"
 )
@@ -56,17 +58,45 @@ func (w *Worker) Run(id chan<- string, job Job) {
 
 	// TODO (next): Consider storing cancel funcs separately from the log.
 	ctx, cancel := context.WithCancel(context.Background())
+
+	// TODO (next): Block on jobs requiring stdin.
+	cmd := exec.CommandContext(ctx, job.Command, job.Args...)
+	stdout, _ := cmd.StdoutPipe()
 	w.log.addEntry(jobID, cancel)
 
-	// TODO (next): Block on jobs requiring stdin, but still capture their output.
-	out, err := exec.CommandContext(ctx, job.Command, job.Args...).Output()
-	w.log.setOutput(jobID, string(out))
-	if err != nil {
-		w.log.setStatus(jobID, "Error - "+err.Error())
-		return
-	}
+	cmd.Start()
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		pipeToOutput(w.log, jobID, stdout)
+		wg.Done()
+	}()
+	wg.Wait()
+
+	cmd.Wait()
 
 	w.log.setStatus(jobID, statusComplete)
+}
+
+func pipeToOutput(log *Log, id string, r io.Reader) error {
+	output := make([]byte, 1024, 1024)
+	for {
+		n, err := r.Read(output)
+		if n > 0 {
+			err = log.appendOutput(id, output)
+			if err != nil {
+				return err
+			}
+		}
+		if err != nil {
+			// The EOF error is ok since it simply means the reader has closed.
+			if err == io.EOF {
+				return nil
+			}
+			return err
+		}
+	}
 }
 
 // Status queries the log for the status of a given process.
@@ -81,12 +111,12 @@ func (w *Worker) Status(id string) (string, error) {
 
 // Out queries the log for the output of a given process.
 func (w *Worker) Out(id string) (string, error) {
-	output, err := w.log.getOutput(id)
+	out, err := w.log.getOutput(id)
 	if err != nil {
 		return "", err
 	}
 
-	return output, nil
+	return out, nil
 }
 
 // KillResult contains a message indicating whether a process was killed and

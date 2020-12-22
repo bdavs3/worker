@@ -62,11 +62,19 @@ func (log *Log) getStatus(id string) (string, error) {
 	return entry.status, nil
 }
 
-func (log *Log) setOutput(id, output string) {
+func (log *Log) appendOutput(id string, output []byte) error {
 	log.mu.Lock()
 	defer log.mu.Unlock()
 
-	log.entries[id].output = output
+	entry, err := log.getEntryLocked(id)
+	if err != nil {
+		return err
+	}
+
+	bytes := []byte(entry.output)
+	entry.output = string(append(bytes, output...))
+
+	return nil
 }
 
 func (log *Log) getOutput(id string) (string, error) {

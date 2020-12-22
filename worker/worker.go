@@ -12,13 +12,14 @@ import (
 const (
 	statusActive   = "active"
 	statusComplete = "complete"
+	statusError    = "error"
 	statusKilled   = "killed"
 )
 
 // JobWorker implements methods to run/terminate Linux processes and
 // query their output/status.
 type JobWorker interface {
-	Run(id chan<- string, job Job)
+	Run(result chan<- Result, job Job)
 	Status(id string) (string, error)
 	Out(id string) (string, error)
 	Kill(id string) (string, error)
@@ -28,10 +29,10 @@ type JobWorker interface {
 // independently.
 type DummyWorker struct{}
 
-func (dw *DummyWorker) Run(id chan<- string, job Job)    { id <- "" }
-func (dw *DummyWorker) Status(id string) (string, error) { return "", nil }
-func (dw *DummyWorker) Out(id string) (string, error)    { return "", nil }
-func (dw *DummyWorker) Kill(id string) (string, error)   { return "", nil }
+func (dw *DummyWorker) Run(result chan<- Result, job Job) { result <- Result{} }
+func (dw *DummyWorker) Status(id string) (string, error)  { return "", nil }
+func (dw *DummyWorker) Out(id string) (string, error)     { return "", nil }
+func (dw *DummyWorker) Kill(id string) (string, error)    { return "", nil }
 
 // Worker is a JobWorker containing a log for the status/output of jobs.
 type Worker struct {
@@ -51,30 +52,64 @@ type Job struct {
 	Args    []string `json:"args"`
 }
 
-// Run initiates the execution of a Linux process.
-func (w *Worker) Run(id chan<- string, job Job) {
-	jobID := shortuuid.New()
-	id <- jobID
+// ServerError occurs when the library cannot establish the stdout pipe or when
+// an error happens while writing to the log.
+type ServerError struct{ msg string }
 
+func (e *ServerError) Error() string { return e.msg }
+
+// CmdSyntaxError occurs when a job cannot be started due to bad syntax.
+type CmdSyntaxError struct{ msg string }
+
+func (e *CmdSyntaxError) Error() string { return e.msg }
+
+// Result contains a job ID if a process successfully begins execution. If not,
+// it contains the error that occurred.
+type Result struct {
+	ID  string
+	Err error
+}
+
+// Run initiates the execution of a Linux process.
+func (w *Worker) Run(result chan<- Result, job Job) {
 	// TODO (next): Consider storing cancel funcs separately from the log.
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// TODO (next): Block on jobs requiring stdin.
 	cmd := exec.CommandContext(ctx, job.Command, job.Args...)
-	stdout, _ := cmd.StdoutPipe()
-	w.log.addEntry(jobID, cancel)
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		result <- Result{Err: &ServerError{"Job output pipe could not be established."}}
+		return
+	}
 
-	cmd.Start()
+	err = cmd.Start()
+	if err != nil {
+		result <- Result{Err: &CmdSyntaxError{"Job failed to start due to invalid syntax."}}
+		return
+	}
+
+	jobID := shortuuid.New()
+	result <- Result{ID: jobID}
+	w.log.addEntry(jobID, cancel)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
-		pipeToOutput(w.log, jobID, stdout)
+		err := pipeToOutput(w.log, jobID, stdout)
+		if err != nil {
+			result <- Result{Err: &ServerError{"Failed to write output to the job log."}}
+			return
+		}
 		wg.Done()
 	}()
 	wg.Wait()
 
-	cmd.Wait()
+	err = cmd.Wait()
+	if err != nil {
+		w.log.setStatus(jobID, statusError)
+		return
+	}
 
 	w.log.setStatus(jobID, statusComplete)
 }
@@ -90,7 +125,7 @@ func pipeToOutput(log *Log, id string, r io.Reader) error {
 			}
 		}
 		if err != nil {
-			// The EOF error is ok since it simply means the reader has closed.
+			// The EOF error is ok since this will occur the command has finished executing.
 			if err == io.EOF {
 				return nil
 			}
@@ -117,13 +152,6 @@ func (w *Worker) Out(id string) (string, error) {
 	}
 
 	return out, nil
-}
-
-// KillResult contains a message indicating whether a process was killed and
-// an error that may have occured during termination.
-type KillResult struct {
-	Message string
-	Err     error
 }
 
 // Kill terminates a given process.

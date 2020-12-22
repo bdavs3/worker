@@ -35,16 +35,30 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 
 	var job worker.Job
 	err = json.Unmarshal(reqBody, &job)
-	if err != nil || len(job.Command) == 0 {
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Request does not contain a valid job."))
 		return
 	}
 
-	id := make(chan string, 1)
-	go h.Worker.Run(id, job)
+	result := make(chan worker.Result, 1)
+	go h.Worker.Run(result, job)
 
-	fmt.Fprint(w, <-id)
+	res := <-result
+	if err := res.Err; err != nil {
+		switch err.(type) {
+		case *worker.ServerError:
+			w.WriteHeader(http.StatusInternalServerError)
+			w.Write([]byte(err.Error()))
+			return
+		case *worker.CmdSyntaxError:
+			w.WriteHeader(http.StatusBadRequest)
+			w.Write([]byte(err.Error()))
+			return
+		}
+	}
+
+	fmt.Fprint(w, res.ID)
 }
 
 // GetJobStatus responds with the status of the given job.

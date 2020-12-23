@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -41,17 +42,18 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := make(chan worker.Result, 1)
-	go h.Worker.Run(result, job)
+	ctx := context.Background()
+	result := make(chan worker.RunResult, 1)
+	go h.Worker.Run(ctx, result, job)
 
 	res := <-result
 	if err := res.Err; err != nil {
 		switch err.(type) {
-		case *worker.ServerError:
+		case *worker.ErrOutputPipe:
 			w.WriteHeader(http.StatusInternalServerError)
 			w.Write([]byte(err.Error()))
 			return
-		case *worker.CmdSyntaxError:
+		case *worker.ErrInvalidCmd:
 			w.WriteHeader(http.StatusBadRequest)
 			w.Write([]byte(err.Error()))
 			return
@@ -97,11 +99,11 @@ func (h *Handler) KillJob(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		switch err.(type) {
-		case *worker.NotActiveErr:
+		case *worker.ErrJobNotActive:
 			w.WriteHeader(http.StatusConflict)
 			w.Write([]byte(err.Error()))
 			return
-		case *worker.NotFoundErr:
+		case *worker.ErrJobNotFound:
 			w.WriteHeader(http.StatusNotFound)
 			w.Write([]byte(err.Error()))
 			return

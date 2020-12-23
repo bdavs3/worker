@@ -172,8 +172,8 @@ func (w *Worker) writeOutput(id string, stdout io.Reader, done chan bool) {
 }
 
 func pipeToLog(id string, log *log, stdout io.Reader) error {
-	bytes := make([]byte, 1024)
 	for {
+		bytes := make([]byte, 1024)
 		n, err := stdout.Read(bytes)
 		if n > 0 {
 			err = log.appendOutput(id, bytes)

@@ -135,33 +135,28 @@ func (w *Worker) Run(ctx context.Context, result chan<- RunResult, job Job) {
 	w.log.setStatus(jobID, statusComplete)
 }
 
-// listenForKill calls the provided CancelFunc if the worker's channel map
-// for the specified ID receives a value.
+// listenForKill calls the provided CancelFunc if the worker's channel associated
+// with the specified ID receives a value.
 func (w *Worker) listenForKill(id string, cancel context.CancelFunc, quit chan bool) {
-	for {
-		if status, err := w.Status(id); err != nil || status != statusActive {
-			return
-		}
-		w.mu.RLock()
-		killC := w.killC[id]
-		w.mu.RUnlock()
+	w.mu.RLock()
+	killC := w.killC[id]
+	w.mu.RUnlock()
 
-		select {
-		case <-killC:
-			cancel()
-			w.log.setStatus(id, statusKilled)
-		case <-quit:
-		}
-
-		w.mu.Lock()
-		delete(w.killC, id)
-		w.mu.Unlock()
-
-		return
+	select {
+	case <-killC:
+		cancel()
+		w.log.setStatus(id, statusKilled)
+	case <-quit:
 	}
+
+	w.mu.Lock()
+	delete(w.killC, id)
+	w.mu.Unlock()
+
+	return
 }
 
-// writeOutput writes to the worker's log using a StdoutPipe.
+// writeOutput writes to the worker's log using the provided io.Reader.
 func (w *Worker) writeOutput(id string, stdout io.Reader, done chan bool) {
 	err := pipeToLog(id, w.log, stdout)
 	if err != nil {
@@ -211,7 +206,7 @@ func (w *Worker) Out(id string) (string, error) {
 	return out, nil
 }
 
-// Kill terminates a given process.
+// Kill terminates a given process using the channel associated with the provided ID.
 func (w *Worker) Kill(id string) (string, error) {
 	status, err := w.log.getStatus(id)
 	if err != nil {

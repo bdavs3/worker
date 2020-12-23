@@ -111,10 +111,6 @@ func (w *Worker) Run(ctx context.Context, result chan<- RunResult, job Job) {
 	result <- RunResult{ID: jobID}
 	w.log.addEntry(jobID)
 
-	w.mu.Lock()
-	w.killC[jobID] = make(chan bool)
-	w.mu.Unlock()
-
 	quitListening := make(chan bool)
 	go w.listenForKill(jobID, cancel, quitListening)
 
@@ -138,9 +134,10 @@ func (w *Worker) Run(ctx context.Context, result chan<- RunResult, job Job) {
 // listenForKill calls the provided CancelFunc if the worker's channel associated
 // with the specified ID receives a value.
 func (w *Worker) listenForKill(id string, cancel context.CancelFunc, quit chan bool) {
-	w.mu.RLock()
+	w.mu.Lock()
+	w.killC[id] = make(chan bool)
 	killC := w.killC[id]
-	w.mu.RUnlock()
+	w.mu.Unlock()
 
 	select {
 	case <-killC:

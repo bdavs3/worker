@@ -2,9 +2,9 @@ package worker
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"os/exec"
+	"sync"
 
 	"github.com/lithammer/shortuuid"
 )
@@ -27,17 +27,18 @@ type JobWorker interface {
 }
 
 // Worker is a JobWorker containing a log for the status/output of jobs and
-// a channel to listen for termination of jobs.
+// a map of channels to listen for the termination of jobs.
 type Worker struct {
 	log   *log
-	killC chan string
+	killC map[string]chan bool
+	mu    sync.RWMutex
 }
 
-// NewWorker returns a Worker containing an empty log.
+// NewWorker returns a Worker containing an empty log and channel map.
 func NewWorker() *Worker {
 	return &Worker{
 		log:   newLog(),
-		killC: make(chan string),
+		killC: make(map[string]chan bool),
 	}
 }
 
@@ -110,15 +111,22 @@ func (w *Worker) Run(ctx context.Context, result chan<- RunResult, job Job) {
 	result <- RunResult{ID: jobID}
 	w.log.addEntry(jobID)
 
-	go w.listenForKill(jobID, cancel)
+	w.mu.Lock()
+	w.killC[jobID] = make(chan bool)
+	w.mu.Unlock()
+
+	quitListening := make(chan bool)
+	go w.listenForKill(jobID, cancel, quitListening)
 
 	done := make(chan bool)
 	go w.writeOutput(jobID, stdout, done)
 	<-done
 
+	quitListening <- true
+
 	err = cmd.Wait()
 	if err != nil {
-		if err.Error() != "signal: killed" {
+		if err.Error() != "signal: killed" { // Prefer to keep custom message.
 			w.log.setStatus(jobID, statusErrExec)
 		}
 		return
@@ -127,19 +135,29 @@ func (w *Worker) Run(ctx context.Context, result chan<- RunResult, job Job) {
 	w.log.setStatus(jobID, statusComplete)
 }
 
-// listenForKill calls the provided CancelFunc if the worker's kill channel
-// receives the specified ID.
-func (w *Worker) listenForKill(id string, cancel context.CancelFunc) {
+// listenForKill calls the provided CancelFunc if the worker's channel map
+// for the specified ID receives a value.
+func (w *Worker) listenForKill(id string, cancel context.CancelFunc, quit chan bool) {
 	for {
 		if status, err := w.Status(id); err != nil || status != statusActive {
 			return
 		}
-		killID := <-w.killC
-		fmt.Println(killID)
-		if killID == id {
-			w.log.setStatus(id, statusKilled)
+		w.mu.RLock()
+		killC := w.killC[id]
+		w.mu.RUnlock()
+
+		select {
+		case <-killC:
 			cancel()
+			w.log.setStatus(id, statusKilled)
+		case <-quit:
 		}
+
+		w.mu.Lock()
+		delete(w.killC, id)
+		w.mu.Unlock()
+
+		return
 	}
 }
 
@@ -154,7 +172,7 @@ func (w *Worker) writeOutput(id string, stdout io.Reader, done chan bool) {
 }
 
 func pipeToLog(id string, log *log, stdout io.Reader) error {
-	bytes := make([]byte, 1024, 1024)
+	bytes := make([]byte, 1024)
 	for {
 		n, err := stdout.Read(bytes)
 		if n > 0 {
@@ -203,7 +221,9 @@ func (w *Worker) Kill(id string) (string, error) {
 		return "", &ErrJobNotActive{"Can't kill an inactive job."}
 	}
 
-	w.killC <- id
+	w.mu.Lock()
+	w.killC[id] <- true
+	w.mu.Unlock()
 
 	return statusKilled, nil
 }

@@ -1,7 +1,6 @@
 package worker
 
 import (
-	"context"
 	"sync"
 )
 
@@ -35,7 +34,7 @@ type NotActiveErr struct{ msg string }
 
 func (e *NotActiveErr) Error() string { return e.msg }
 
-func (log *Log) addEntry(id string, cancel context.CancelFunc) {
+func (log *Log) addEntry(id string) {
 	log.mu.Lock()
 	defer log.mu.Unlock()
 

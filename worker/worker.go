@@ -18,7 +18,7 @@ const (
 // JobWorker implements methods to run/terminate Linux processes and
 // query their output/status.
 type JobWorker interface {
-	Run(result chan<- Result, job Job)
+	Run(ctx context.Context, result chan<- Result, job Job)
 	Status(id string) (string, error)
 	Out(id string) (string, error)
 	Kill(id string) (string, error)
@@ -28,10 +28,12 @@ type JobWorker interface {
 // independently.
 type DummyWorker struct{}
 
-func (dw *DummyWorker) Run(result chan<- Result, job Job) { result <- Result{} }
-func (dw *DummyWorker) Status(id string) (string, error)  { return "", nil }
-func (dw *DummyWorker) Out(id string) (string, error)     { return "", nil }
-func (dw *DummyWorker) Kill(id string) (string, error)    { return "", nil }
+func (dw *DummyWorker) Run(ctx context.Context, result chan<- Result, job Job) {
+	result <- Result{}
+}
+func (dw *DummyWorker) Status(id string) (string, error) { return "", nil }
+func (dw *DummyWorker) Out(id string) (string, error)    { return "", nil }
+func (dw *DummyWorker) Kill(id string) (string, error)   { return "", nil }
 
 // Worker is a JobWorker containing a log for the status/output of jobs.
 type Worker struct {
@@ -72,12 +74,13 @@ type Result struct {
 }
 
 // Run initiates the execution of a Linux process.
-func (w *Worker) Run(result chan<- Result, job Job) {
-	ctx, cancel := context.WithCancel(context.Background())
+func (w *Worker) Run(ctx context.Context, result chan<- Result, job Job) {
+	// TODO (next): Block on jobs requiring stdin.
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// TODO (next): Block on jobs requiring stdin.
 	cmd := exec.CommandContext(ctx, job.Command, job.Args...)
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		result <- Result{Err: &ServerError{"Job output pipe could not be established."}}
@@ -92,7 +95,7 @@ func (w *Worker) Run(result chan<- Result, job Job) {
 
 	jobID := shortuuid.New()
 	result <- Result{ID: jobID}
-	w.log.addEntry(jobID, cancel)
+	w.log.addEntry(jobID)
 
 	go func() {
 		for {

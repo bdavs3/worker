@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -41,8 +42,9 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	ctx := context.Background()
 	result := make(chan worker.Result, 1)
-	go h.Worker.Run(result, job)
+	go h.Worker.Run(ctx, result, job)
 
 	res := <-result
 	if err := res.Err; err != nil {

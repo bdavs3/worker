@@ -12,8 +12,7 @@ import (
 const (
 	statusActive   = "active"
 	statusComplete = "complete"
-	statusErrLog   = "logging error"
-	statusErrExec  = "execution error"
+	statusError    = "error"
 	statusKilled   = "killed"
 )
 
@@ -123,7 +122,7 @@ func (w *Worker) Run(ctx context.Context, result chan<- RunResult, job Job) {
 	err = cmd.Wait()
 	if err != nil {
 		if err.Error() != "signal: killed" { // Prefer to keep custom message.
-			w.log.setStatus(jobID, statusErrExec)
+			w.log.setStatus(jobID, statusError)
 		}
 		return
 	}
@@ -157,7 +156,7 @@ func (w *Worker) listenForKill(id string, cancel context.CancelFunc, quit chan b
 func (w *Worker) writeOutput(id string, stdout io.Reader, done chan bool) {
 	err := pipeToLog(id, w.log, stdout)
 	if err != nil {
-		w.log.setStatus(id, statusErrLog)
+		w.log.setStatus(id, statusError)
 		return
 	}
 	done <- true

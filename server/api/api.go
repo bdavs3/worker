@@ -52,13 +52,12 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	switch err.(type) {
-	case *worker.ErrOutputPipe:
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(err.Error()))
 	case *worker.ErrInvalidCmd:
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte(err.Error()))
+	default:
+		w.WriteHeader(http.StatusInternalServerError)
 	}
+	w.Write([]byte(err.Error()))
 }
 
 // GetJobStatus responds with the status of the given job.
@@ -101,9 +100,10 @@ func (h *Handler) KillJob(w http.ResponseWriter, r *http.Request) {
 	switch err.(type) {
 	case *worker.ErrJobNotActive:
 		w.WriteHeader(http.StatusConflict)
-		w.Write([]byte(err.Error()))
 	case *worker.ErrJobNotFound:
 		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(err.Error()))
+	default:
+		w.WriteHeader(http.StatusInternalServerError)
 	}
+	w.Write([]byte(err.Error()))
 }

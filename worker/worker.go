@@ -110,7 +110,7 @@ func (w *Worker) Run(ctx context.Context, result chan<- RunResult, job Job) {
 	result <- RunResult{ID: jobID}
 	w.log.addEntry(jobID)
 
-	quitListening := make(chan bool)
+	quitListening := make(chan bool, 1)
 	go w.listenForKill(jobID, cancel, quitListening)
 
 	done := make(chan bool)
@@ -121,7 +121,8 @@ func (w *Worker) Run(ctx context.Context, result chan<- RunResult, job Job) {
 
 	err = cmd.Wait()
 	if err != nil {
-		if err.Error() != "signal: killed" { // Prefer to keep custom message.
+		// Prefer to keep 'kill' status if the process was terminated.
+		if cmd.ProcessState.ExitCode() != -1 {
 			w.log.setStatus(jobID, statusError)
 		}
 		return
@@ -166,9 +167,9 @@ func pipeToLog(id string, log *log, stdout io.Reader) error {
 	bytes := make([]byte, 1024)
 	for {
 		n, err := stdout.Read(bytes)
-		if err != nil {
-			return err
-		}
+		// if err != nil {
+		// 	return err
+		// }
 		if n > 0 {
 			err = log.appendOutput(id, bytes[:n])
 			if err != nil {
@@ -207,16 +208,11 @@ func (w *Worker) Out(id string) (string, error) {
 
 // Kill terminates a given process using the channel associated with the provided ID.
 func (w *Worker) Kill(id string) (string, error) {
-	status, err := w.log.getStatus(id)
-	if err != nil {
-		return "", err
-	}
-	if status != statusActive {
-		return "", &ErrJobNotActive{"can't kill inactive job"}
-	}
-
 	w.mu.Lock()
-	w.killC[id] <- true
+	killC, ok := w.killC[id]
+	if ok {
+		killC <- true
+	}
 	w.mu.Unlock()
 
 	return statusKilled, nil

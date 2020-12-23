@@ -47,17 +47,17 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 	go h.Worker.Run(ctx, result, job)
 
 	res := <-result
-	if err := res.Err; err == nil {
+	if res.Err == nil {
 		fmt.Fprint(w, res.ID)
 		return
 	}
-	switch err.(type) {
+	switch res.Err.(type) {
 	case *worker.ErrInvalidCmd:
 		w.WriteHeader(http.StatusBadRequest)
 	default:
 		w.WriteHeader(http.StatusInternalServerError)
 	}
-	w.Write([]byte(err.Error()))
+	w.Write([]byte(res.Err.Error()))
 }
 
 // GetJobStatus responds with the status of the given job.

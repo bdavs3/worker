@@ -30,7 +30,7 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Unable to read request."))
+		w.Write([]byte("unable to read request"))
 		return
 	}
 
@@ -38,7 +38,7 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 	err = json.Unmarshal(reqBody, &job)
 	if err != nil || len(job.Command) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("Request does not contain a valid job."))
+		w.Write([]byte("request does not contain a valid job"))
 		return
 	}
 
@@ -47,20 +47,18 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 	go h.Worker.Run(ctx, result, job)
 
 	res := <-result
-	if err := res.Err; err != nil {
-		switch err.(type) {
-		case *worker.ErrOutputPipe:
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(err.Error()))
-			return
-		case *worker.ErrInvalidCmd:
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(err.Error()))
-			return
-		}
+	if err := res.Err; err == nil {
+		fmt.Fprint(w, res.ID)
+		return
 	}
-
-	fmt.Fprint(w, res.ID)
+	switch err.(type) {
+	case *worker.ErrOutputPipe:
+		w.WriteHeader(http.StatusInternalServerError)
+		w.Write([]byte(err.Error()))
+	case *worker.ErrInvalidCmd:
+		w.WriteHeader(http.StatusBadRequest)
+		w.Write([]byte(err.Error()))
+	}
 }
 
 // GetJobStatus responds with the status of the given job.
@@ -96,19 +94,16 @@ func (h *Handler) KillJob(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
 	result, err := h.Worker.Kill(id)
-
-	if err != nil {
-		switch err.(type) {
-		case *worker.ErrJobNotActive:
-			w.WriteHeader(http.StatusConflict)
-			w.Write([]byte(err.Error()))
-			return
-		case *worker.ErrJobNotFound:
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(err.Error()))
-			return
-		}
+	if err == nil {
+		fmt.Fprint(w, result)
+		return
 	}
-
-	fmt.Fprint(w, result)
+	switch err.(type) {
+	case *worker.ErrJobNotActive:
+		w.WriteHeader(http.StatusConflict)
+		w.Write([]byte(err.Error()))
+	case *worker.ErrJobNotFound:
+		w.WriteHeader(http.StatusNotFound)
+		w.Write([]byte(err.Error()))
+	}
 }

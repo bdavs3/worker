@@ -26,8 +26,8 @@ type JobWorker interface {
 	Kill(id string) (string, error)
 }
 
-// Worker is a JobWorker containing a log for the status/output of jobs and
-// a map of channels to listen for the termination of jobs.
+// Worker provides the machinery for executing and controlling Linux processes.
+// A zero value of this type is invalid - use NewWorker to create a new instance.
 type Worker struct {
 	log   *log
 	killC map[string]chan bool
@@ -97,13 +97,13 @@ func (w *Worker) Run(ctx context.Context, result chan<- RunResult, job Job) {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		result <- RunResult{Err: &ErrOutputPipe{"Job failed to start due to a bad output pipe."}}
+		result <- RunResult{Err: &ErrOutputPipe{"job failed to start: bad output pipe"}}
 		return
 	}
 
 	err = cmd.Start()
 	if err != nil {
-		result <- RunResult{Err: &ErrInvalidCmd{"Job failed to start due to invalid syntax."}}
+		result <- RunResult{Err: &ErrInvalidCmd{"job failed to start: invalid syntax"}}
 		return
 	}
 
@@ -213,7 +213,7 @@ func (w *Worker) Kill(id string) (string, error) {
 		return "", err
 	}
 	if status != statusActive {
-		return "", &ErrJobNotActive{"Can't kill an inactive job."}
+		return "", &ErrJobNotActive{"can't kill inactive job"}
 	}
 
 	w.mu.Lock()

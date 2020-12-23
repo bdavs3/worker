@@ -47,7 +47,7 @@ func NewClient() *Client {
 // PostJob passes a job to the worker library for execution.
 func (c *Client) PostJob(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
-		return errors.New("No job supplied to 'run' command")
+		return errors.New("no job supplied to 'run' command")
 	}
 
 	job := worker.Job{
@@ -77,7 +77,7 @@ func (c *Client) PostJob(ctx *cli.Context) error {
 // GetJobStatus queries the status of a job being handled by the worker library.
 func (c *Client) GetJobStatus(ctx *cli.Context) error {
 	if ctx.NArg() != 1 {
-		return errors.New("No job ID supplied to 'status' command")
+		return errors.New("no job ID supplied to 'status' command")
 	}
 
 	jobID := ctx.Args().Get(0)
@@ -99,7 +99,7 @@ func (c *Client) GetJobStatus(ctx *cli.Context) error {
 // GetJobOutput queries the output of a job being handled by the worker library.
 func (c *Client) GetJobOutput(ctx *cli.Context) error {
 	if ctx.NArg() != 1 {
-		return errors.New("No job ID supplied to 'out' command")
+		return errors.New("no job ID supplied to 'out' command")
 	}
 
 	jobID := ctx.Args().Get(0)
@@ -121,7 +121,7 @@ func (c *Client) GetJobOutput(ctx *cli.Context) error {
 // KillJob terminates a job being handled by the worker library.
 func (c *Client) KillJob(ctx *cli.Context) error {
 	if ctx.NArg() != 1 {
-		return errors.New("No job ID supplied to 'kill' command")
+		return errors.New("no job ID supplied to 'kill' command")
 	}
 
 	jobID := ctx.Args().Get(0)
@@ -163,7 +163,7 @@ func (c *Client) makeRequestWithAuth(method, endpoint string, requestBody io.Rea
 		return "", err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("HTTP status %d\n%s", resp.StatusCode, body)
+		return "", fmt.Errorf("%s\n%s", http.StatusText(resp.StatusCode), body)
 	}
 
 	return string(body), nil

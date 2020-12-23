@@ -79,7 +79,7 @@ func (log *log) getOutput(id string) (string, error) {
 func (log *log) getEntryLocked(id string) (*logEntry, error) {
 	entry, ok := log.entries[id]
 	if !ok {
-		return &logEntry{}, &ErrJobNotFound{"Job not found."}
+		return nil, &ErrJobNotFound{"job not found"}
 	}
 
 	return entry, nil

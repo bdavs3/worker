@@ -15,7 +15,6 @@ type Log struct {
 type logEntry struct {
 	status string
 	output string
-	cancel context.CancelFunc
 }
 
 // NewLog returns a log containing an initialized entry map.
@@ -31,7 +30,7 @@ type NotFoundErr struct{ msg string }
 func (e *NotFoundErr) Error() string { return e.msg }
 
 // NotActiveErr occurs when termination is attempted on a job that
-// doesn't exist.
+// is no longer active.
 type NotActiveErr struct{ msg string }
 
 func (e *NotActiveErr) Error() string { return e.msg }
@@ -40,7 +39,7 @@ func (log *Log) addEntry(id string, cancel context.CancelFunc) {
 	log.mu.Lock()
 	defer log.mu.Unlock()
 
-	log.entries[id] = &logEntry{status: statusActive, output: "", cancel: cancel}
+	log.entries[id] = &logEntry{status: statusActive, output: ""}
 }
 
 func (log *Log) setStatus(id, status string) {
@@ -87,21 +86,6 @@ func (log *Log) getOutput(id string) (string, error) {
 	}
 
 	return entry.output, nil
-}
-
-func (log *Log) getCancelFunc(id string) (func(), error) {
-	log.mu.RLock()
-	defer log.mu.RUnlock()
-
-	entry, err := log.getEntryLocked(id)
-	if err != nil {
-		return func() {}, err
-	}
-	if entry.status != "active" {
-		return func() {}, &NotActiveErr{"Job not active."}
-	}
-
-	return entry.cancel, nil
 }
 
 func (log *Log) getEntryLocked(id string) (*logEntry, error) {

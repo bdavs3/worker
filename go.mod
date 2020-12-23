@@ -10,5 +10,4 @@ require (
 	github.com/google/uuid v1.1.2 // indirect
 	github.com/lithammer/shortuuid v3.0.0+incompatible
 	github.com/urfave/cli/v2 v2.3.0
-	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324
 )

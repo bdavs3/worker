@@ -35,7 +35,7 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 
 	var job worker.Job
 	err = json.Unmarshal(reqBody, &job)
-	if err != nil {
+	if err != nil || len(job.Command) == 0 {
 		w.WriteHeader(http.StatusBadRequest)
 		w.Write([]byte("Request does not contain a valid job."))
 		return

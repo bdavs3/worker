@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"os/exec"
-	"sync"
 
 	"github.com/lithammer/shortuuid"
 )
@@ -36,13 +35,15 @@ func (dw *DummyWorker) Kill(id string) (string, error)    { return "", nil }
 
 // Worker is a JobWorker containing a log for the status/output of jobs.
 type Worker struct {
-	log *Log
+	log   *Log
+	killC chan string
 }
 
 // NewWorker returns a Worker containing a new log.
 func NewWorker() *Worker {
 	return &Worker{
-		log: NewLog(),
+		log:   NewLog(),
+		killC: make(chan string),
 	}
 }
 
@@ -72,8 +73,8 @@ type Result struct {
 
 // Run initiates the execution of a Linux process.
 func (w *Worker) Run(result chan<- Result, job Job) {
-	// TODO (next): Consider storing cancel funcs separately from the log.
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	// TODO (next): Block on jobs requiring stdin.
 	cmd := exec.CommandContext(ctx, job.Command, job.Args...)
@@ -93,21 +94,35 @@ func (w *Worker) Run(result chan<- Result, job Job) {
 	result <- Result{ID: jobID}
 	w.log.addEntry(jobID, cancel)
 
-	var wg sync.WaitGroup
-	wg.Add(1)
+	go func() {
+		for {
+			if status, err := w.Status(jobID); err != nil || status != statusActive {
+				return
+			}
+			id := <-w.killC
+			if id == jobID {
+				w.log.setStatus(jobID, statusKilled)
+				cancel()
+			}
+		}
+	}()
+
+	done := make(chan struct{}) // Empty struct to not use memory.
 	go func() {
 		err := pipeToOutput(w.log, jobID, stdout)
 		if err != nil {
 			result <- Result{Err: &ServerError{"Failed to write output to the job log."}}
 			return
 		}
-		wg.Done()
+		done <- struct{}{}
 	}()
-	wg.Wait()
+	<-done
 
 	err = cmd.Wait()
 	if err != nil {
-		w.log.setStatus(jobID, statusError)
+		if err.Error() != "signal: killed" {
+			w.log.setStatus(jobID, statusError)
+		}
 		return
 	}
 
@@ -125,7 +140,7 @@ func pipeToOutput(log *Log, id string, r io.Reader) error {
 			}
 		}
 		if err != nil {
-			// The EOF error is ok since this will occur the command has finished executing.
+			// The EOF error is ok since it will occur when the command has finished executing.
 			if err == io.EOF {
 				return nil
 			}
@@ -156,12 +171,15 @@ func (w *Worker) Out(id string) (string, error) {
 
 // Kill terminates a given process.
 func (w *Worker) Kill(id string) (string, error) {
-	cancel, err := w.log.getCancelFunc(id)
+	status, err := w.log.getStatus(id)
 	if err != nil {
 		return "", err
 	}
+	if status != statusActive {
+		return "", &NotActiveErr{"Can't kill inactive job."}
+	}
 
-	cancel()
+	w.killC <- id
 
 	return statusKilled, nil
 }

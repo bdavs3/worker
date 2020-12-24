@@ -220,11 +220,13 @@ func (w *Worker) Out(id string) (string, error) {
 // Kill terminates a given process using the channel associated with the provided ID.
 func (w *Worker) Kill(id string) (string, error) {
 	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	killC, ok := w.killC[id]
-	if ok {
-		killC <- true
+	if !ok {
+		return "", &ErrJobNotActive{"job not active"}
 	}
-	w.mu.Unlock()
+	killC <- true
 
 	return statusKilled, nil
 }

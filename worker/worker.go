@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"io"
+	"os"
 	"os/exec"
 	"sync"
 
@@ -92,8 +93,8 @@ func (w *Worker) Run(ctx context.Context, result chan<- RunResult, job Job) {
 	cmdctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	proceed := make(chan bool)
-	go w.listenForReqCancel(ctx, cancel, proceed)
+	reqCompleted := make(chan bool)
+	go w.listenForReqCancel(ctx, cancel, reqCompleted)
 
 	cmd := exec.CommandContext(cmdctx, job.Command, job.Args...)
 
@@ -112,16 +113,20 @@ func (w *Worker) Run(ctx context.Context, result chan<- RunResult, job Job) {
 	jobID := shortuuid.New()
 	w.log.addEntry(jobID)
 	result <- RunResult{ID: jobID}
-	proceed <- true
+	reqCompleted <- true
 
-	quitListening := make(chan bool, 1)
-	go w.listenForKill(jobID, cancel, quitListening)
+	quit := make(chan bool, 1)
+	go w.listenForKill(jobID, cancel, quit)
 
 	done := make(chan bool)
 	go w.writeOutput(jobID, stdout, done)
-	<-done
 
-	quitListening <- true
+	select {
+	case <-cmdctx.Done(): // cmd killed
+	case <-done:
+	}
+
+	quit <- true
 
 	err = cmd.Wait()
 	if err != nil {
@@ -135,11 +140,11 @@ func (w *Worker) Run(ctx context.Context, result chan<- RunResult, job Job) {
 	w.log.setStatus(jobID, statusComplete)
 }
 
-func (w *Worker) listenForReqCancel(ctx context.Context, cancel context.CancelFunc, proceed chan bool) {
+func (w *Worker) listenForReqCancel(ctx context.Context, cancel context.CancelFunc, reqCompleted chan bool) {
 	select {
 	case <-ctx.Done():
 		cancel()
-	case <-proceed:
+	case <-reqCompleted:
 	}
 	return
 }
@@ -167,7 +172,7 @@ func (w *Worker) listenForKill(id string, cancel context.CancelFunc, quit chan b
 }
 
 // writeOutput writes to the worker's log using the provided io.Reader.
-func (w *Worker) writeOutput(id string, stdout io.Reader, done chan bool) {
+func (w *Worker) writeOutput(id string, stdout io.ReadCloser, done chan bool) {
 	err := pipeToLog(id, w.log, stdout)
 	if err != nil {
 		w.log.setStatus(id, statusError)
@@ -176,23 +181,27 @@ func (w *Worker) writeOutput(id string, stdout io.Reader, done chan bool) {
 	done <- true
 }
 
-func pipeToLog(id string, log *log, stdout io.Reader) error {
+func pipeToLog(id string, log *log, stdout io.ReadCloser) error {
 	bytes := make([]byte, 1024)
 	for {
 		n, err := stdout.Read(bytes)
-		// TODO: Handle error
-		if n > 0 {
-			err = log.appendOutput(id, bytes[:n])
-			if err != nil {
-				return err
-			}
-		}
 		if err != nil {
+			// Avoid writing 'error' to status log entries when a job is in fact killed,
+			// which causes a PathError due to the reader closing.
+			if _, ok := err.(*os.PathError); ok {
+				return nil
+			}
 			// The EOF error is to be expected when the command has finished executing.
 			if err == io.EOF {
 				return nil
 			}
 			return err
+		}
+		if n > 0 {
+			err := log.appendOutput(id, bytes[:n])
+			if err != nil {
+				return err
+			}
 		}
 	}
 }

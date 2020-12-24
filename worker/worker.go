@@ -89,10 +89,13 @@ type RunResult struct {
 // Run initiates the execution of a Linux process.
 func (w *Worker) Run(ctx context.Context, result chan<- RunResult, job Job) {
 	// TODO (next): Block on jobs requiring stdin.
-	ctx, cancel := context.WithCancel(ctx)
+	cmdctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, job.Command, job.Args...)
+	proceed := make(chan bool)
+	go w.listenForReqCancel(ctx, cancel, proceed)
+
+	cmd := exec.CommandContext(cmdctx, job.Command, job.Args...)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -107,8 +110,9 @@ func (w *Worker) Run(ctx context.Context, result chan<- RunResult, job Job) {
 	}
 
 	jobID := shortuuid.New()
-	result <- RunResult{ID: jobID}
 	w.log.addEntry(jobID)
+	result <- RunResult{ID: jobID}
+	proceed <- true
 
 	quitListening := make(chan bool, 1)
 	go w.listenForKill(jobID, cancel, quitListening)
@@ -129,6 +133,15 @@ func (w *Worker) Run(ctx context.Context, result chan<- RunResult, job Job) {
 	}
 
 	w.log.setStatus(jobID, statusComplete)
+}
+
+func (w *Worker) listenForReqCancel(ctx context.Context, cancel context.CancelFunc, proceed chan bool) {
+	select {
+	case <-ctx.Done():
+		cancel()
+	case <-proceed:
+	}
+	return
 }
 
 // listenForKill calls the provided CancelFunc if the worker's channel associated
@@ -167,9 +180,7 @@ func pipeToLog(id string, log *log, stdout io.Reader) error {
 	bytes := make([]byte, 1024)
 	for {
 		n, err := stdout.Read(bytes)
-		// if err != nil {
-		// 	return err
-		// }
+		// TODO: Handle error
 		if n > 0 {
 			err = log.appendOutput(id, bytes[:n])
 			if err != nil {
@@ -209,11 +220,13 @@ func (w *Worker) Out(id string) (string, error) {
 // Kill terminates a given process using the channel associated with the provided ID.
 func (w *Worker) Kill(id string) (string, error) {
 	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	killC, ok := w.killC[id]
-	if ok {
-		killC <- true
+	if !ok {
+		return "", &ErrJobNotActive{"job not active"}
 	}
-	w.mu.Unlock()
+	killC <- true
 
 	return statusKilled, nil
 }

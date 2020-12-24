@@ -2,6 +2,7 @@ package client
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -144,7 +145,9 @@ func (c *Client) KillJob(ctx *cli.Context) error {
 // the request's Authorization header. It reads the response body and returns
 // it as a string.
 func (c *Client) makeRequestWithAuth(method, endpoint string, requestBody io.Reader) (string, error) {
-	req, err := http.NewRequest(method, c.BaseURL+endpoint, requestBody)
+	ctx := context.Background()
+
+	req, err := http.NewRequestWithContext(ctx, method, c.BaseURL+endpoint, requestBody)
 	if err != nil {
 		return "", err
 	}

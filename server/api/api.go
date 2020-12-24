@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -27,6 +26,8 @@ func NewHandler(worker worker.JobWorker) *Handler {
 // PostJob initiates the worker's execution of the job contained in the
 // request and if successful, responds with the id assigned to that job.
 func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -42,7 +43,6 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := context.Background()
 	result := make(chan worker.RunResult, 1)
 	go h.Worker.Run(ctx, result, job)
 

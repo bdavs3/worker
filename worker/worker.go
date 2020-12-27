@@ -20,7 +20,7 @@ const (
 // JobWorker implements methods to run/terminate Linux processes and
 // query their output/status.
 type JobWorker interface {
-	Run(ctx context.Context, result chan<- RunResult, job Job)
+	Run(job Job) string
 	Status(id string) (string, error)
 	Out(id string) (string, error)
 	Kill(id string) (string, error)
@@ -46,9 +46,7 @@ func NewWorker() *Worker {
 // independently.
 type DummyWorker struct{}
 
-func (dw *DummyWorker) Run(ctx context.Context, result chan<- RunResult, job Job) {
-	result <- RunResult{}
-}
+func (dw *DummyWorker) Run(job Job) string               { return "" }
 func (dw *DummyWorker) Status(id string) (string, error) { return "", nil }
 func (dw *DummyWorker) Out(id string) (string, error)    { return "", nil }
 func (dw *DummyWorker) Kill(id string) (string, error)   { return "", nil }
@@ -88,65 +86,56 @@ type RunResult struct {
 }
 
 // Run initiates the execution of a Linux process.
-func (w *Worker) Run(ctx context.Context, result chan<- RunResult, job Job) {
-	// TODO (next): Block on jobs requiring stdin.
-	cmdctx, cancel := context.WithCancel(context.Background())
+func (w *Worker) Run(job Job) string {
+	jobID := shortuuid.New()
+	w.log.addEntry(jobID)
+
+	go w.execJob(jobID, job)
+
+	return jobID
+}
+
+func (w *Worker) execJob(id string, job Job) {
+	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	reqCompleted := make(chan bool)
-	go w.listenForReqCancel(ctx, cancel, reqCompleted)
-
-	cmd := exec.CommandContext(cmdctx, job.Command, job.Args...)
+	cmd := exec.CommandContext(ctx, job.Command, job.Args...)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		result <- RunResult{Err: &ErrOutputPipe{"job failed to start: bad output pipe"}}
+		w.log.setStatus(id, err.Error())
 		return
 	}
 
 	err = cmd.Start()
 	if err != nil {
-		result <- RunResult{Err: &ErrInvalidCmd{"job failed to start: invalid syntax"}}
+		w.log.setStatus(id, err.Error())
 		return
 	}
 
-	jobID := shortuuid.New()
-	w.log.addEntry(jobID)
-	result <- RunResult{ID: jobID}
-	reqCompleted <- true
-
 	quit := make(chan bool, 1)
-	go w.listenForKill(jobID, cancel, quit)
+	go w.listenForKill(id, cancel, quit)
 
 	done := make(chan bool)
-	go w.writeOutput(jobID, stdout, done)
-
-	select {
-	case <-cmdctx.Done(): // cmd killed
-	case <-done:
-	}
-
-	quit <- true
+	go w.writeOutput(id, stdout, done)
 
 	err = cmd.Wait()
 	if err != nil {
 		// Prefer to keep 'kill' status if the process was terminated.
 		if cmd.ProcessState.ExitCode() != -1 {
-			w.log.setStatus(jobID, statusError)
+			w.log.setStatus(id, statusError)
 		}
 		return
 	}
 
-	w.log.setStatus(jobID, statusComplete)
-}
-
-func (w *Worker) listenForReqCancel(ctx context.Context, cancel context.CancelFunc, reqCompleted chan bool) {
 	select {
-	case <-ctx.Done():
-		cancel()
-	case <-reqCompleted:
+	case <-ctx.Done(): // cmd killed
+	case <-done:
 	}
-	return
+
+	quit <- true
+
+	w.log.setStatus(id, statusComplete)
 }
 
 // listenForKill calls the provided CancelFunc if the worker's channel associated

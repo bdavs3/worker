@@ -26,8 +26,6 @@ func NewHandler(worker worker.JobWorker) *Handler {
 // PostJob initiates the worker's execution of the job contained in the
 // request and if successful, responds with the id assigned to that job.
 func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
@@ -43,21 +41,8 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result := make(chan worker.RunResult, 1)
-	go h.Worker.Run(ctx, result, job)
-
-	res := <-result
-	if res.Err == nil {
-		fmt.Fprint(w, res.ID)
-		return
-	}
-	switch res.Err.(type) {
-	case *worker.ErrInvalidCmd:
-		w.WriteHeader(http.StatusBadRequest)
-	default:
-		w.WriteHeader(http.StatusInternalServerError)
-	}
-	w.Write([]byte(res.Err.Error()))
+	id := h.Worker.Run(job)
+	fmt.Fprint(w, id)
 }
 
 // GetJobStatus responds with the status of the given job.

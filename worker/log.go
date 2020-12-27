@@ -30,11 +30,17 @@ func (log *log) addEntry(id string) {
 	log.entries[id] = &logEntry{status: statusActive, output: ""}
 }
 
-func (log *log) setStatus(id, status string) {
+func (log *log) setStatus(id, status string) error {
 	log.mu.Lock()
 	defer log.mu.Unlock()
 
-	log.entries[id].status = status
+	entry, err := log.getEntryLocked(id)
+	if err != nil {
+		return err
+	}
+
+	entry.status = status
+	return nil
 }
 
 func (log *log) getStatus(id string) (string, error) {

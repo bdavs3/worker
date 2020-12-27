@@ -1,6 +1,7 @@
 package worker
 
 import (
+	"bytes"
 	"sync"
 )
 
@@ -13,7 +14,7 @@ type log struct {
 // logEntry is a struct containing the status and output of a process.
 type logEntry struct {
 	status string
-	output string
+	output *bytes.Buffer
 }
 
 // newLog returns a log containing an initialized entry map.
@@ -27,7 +28,7 @@ func (log *log) addEntry(id string) {
 	log.mu.Lock()
 	defer log.mu.Unlock()
 
-	log.entries[id] = &logEntry{status: statusActive, output: ""}
+	log.entries[id] = &logEntry{status: statusActive, output: bytes.NewBuffer([]byte(""))}
 }
 
 func (log *log) setStatus(id, status string) error {
@@ -55,28 +56,13 @@ func (log *log) getStatus(id string) (string, error) {
 	return entry.status, nil
 }
 
-func (log *log) appendOutput(id string, output []byte) error {
-	log.mu.Lock()
-	defer log.mu.Unlock()
-
-	entry, err := log.getEntryLocked(id)
-	if err != nil {
-		return err
-	}
-
-	bytes := []byte(entry.output)
-	entry.output = string(append(bytes, output...))
-
-	return nil
-}
-
-func (log *log) getOutput(id string) (string, error) {
+func (log *log) getOutputBuffer(id string) (*bytes.Buffer, error) {
 	log.mu.RLock()
 	defer log.mu.RUnlock()
 
 	entry, err := log.getEntryLocked(id)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	return entry.output, nil

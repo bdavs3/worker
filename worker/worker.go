@@ -3,7 +3,6 @@ package worker
 import (
 	"context"
 	"io"
-	"os"
 	"os/exec"
 	"sync"
 
@@ -143,35 +142,11 @@ func (w *Worker) listenForKill(ctx context.Context, cancel context.CancelFunc, i
 }
 
 // writeOutput writes to the worker's log using the provided io.Reader.
-func (w *Worker) writeOutput(id string, stdout io.ReadCloser) {
-	err := pipeToLog(id, w.log, stdout)
+func (w *Worker) writeOutput(id string, r io.ReadCloser) {
+	buffer, err := w.log.getOutputBuffer(id)
+	_, err = io.Copy(buffer, r)
 	if err != nil {
 		w.log.setStatus(id, statusError)
-	}
-}
-
-func pipeToLog(id string, log *log, stdout io.ReadCloser) error {
-	bytes := make([]byte, 1024)
-	for {
-		n, err := stdout.Read(bytes)
-		if err != nil {
-			// Avoid writing 'error' to status log entries when a job is in fact killed,
-			// which causes a PathError due to the reader closing.
-			if _, ok := err.(*os.PathError); ok {
-				return nil
-			}
-			// The EOF error is to be expected when the command has finished executing.
-			if err == io.EOF {
-				return nil
-			}
-			return err
-		}
-		if n > 0 {
-			err := log.appendOutput(id, bytes[:n])
-			if err != nil {
-				return err
-			}
-		}
 	}
 }
 
@@ -187,12 +162,12 @@ func (w *Worker) Status(id string) (string, error) {
 
 // Out queries the log for the output of a given process.
 func (w *Worker) Out(id string) (string, error) {
-	out, err := w.log.getOutput(id)
+	out, err := w.log.getOutputBuffer(id)
 	if err != nil {
 		return "", err
 	}
 
-	return out, nil
+	return out.String(), nil
 }
 
 // Kill terminates a given process using the channel associated with the provided ID.

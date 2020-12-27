@@ -78,13 +78,6 @@ type ErrJobNotActive struct{ msg string }
 
 func (e *ErrJobNotActive) Error() string { return e.msg }
 
-// RunResult contains the job ID for a process that successfully began execution
-// or an error for one that did not.
-type RunResult struct {
-	ID  string
-	Err error
-}
-
 // Run initiates the execution of a Linux process.
 func (w *Worker) Run(job Job) string {
 	jobID := shortuuid.New()
@@ -113,11 +106,8 @@ func (w *Worker) execJob(id string, job Job) {
 		return
 	}
 
-	quit := make(chan bool, 1)
-	go w.listenForKill(id, cancel, quit)
-
-	done := make(chan bool)
-	go w.writeOutput(id, stdout, done)
+	go w.listenForKill(ctx, cancel, id)
+	go w.writeOutput(id, stdout)
 
 	err = cmd.Wait()
 	if err != nil {
@@ -128,21 +118,14 @@ func (w *Worker) execJob(id string, job Job) {
 		return
 	}
 
-	select {
-	case <-ctx.Done(): // cmd killed
-	case <-done:
-	}
-
-	quit <- true
-
 	w.log.setStatus(id, statusComplete)
 }
 
 // listenForKill calls the provided CancelFunc if the worker's channel associated
 // with the specified ID receives a value.
-func (w *Worker) listenForKill(id string, cancel context.CancelFunc, quit chan bool) {
-	w.mu.Lock()
+func (w *Worker) listenForKill(ctx context.Context, cancel context.CancelFunc, id string) {
 	w.killC[id] = make(chan bool)
+	w.mu.Lock()
 	killC := w.killC[id]
 	w.mu.Unlock()
 
@@ -150,24 +133,21 @@ func (w *Worker) listenForKill(id string, cancel context.CancelFunc, quit chan b
 	case <-killC:
 		cancel()
 		w.log.setStatus(id, statusKilled)
-	case <-quit:
+	case <-ctx.Done():
+		// Job execution completed. Stop listening.
 	}
 
 	w.mu.Lock()
 	delete(w.killC, id)
 	w.mu.Unlock()
-
-	return
 }
 
 // writeOutput writes to the worker's log using the provided io.Reader.
-func (w *Worker) writeOutput(id string, stdout io.ReadCloser, done chan bool) {
+func (w *Worker) writeOutput(id string, stdout io.ReadCloser) {
 	err := pipeToLog(id, w.log, stdout)
 	if err != nil {
 		w.log.setStatus(id, statusError)
-		return
 	}
-	done <- true
 }
 
 func pipeToLog(id string, log *log, stdout io.ReadCloser) error {

@@ -2,6 +2,7 @@ package worker
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"os/exec"
 	"sync"
@@ -77,14 +78,14 @@ type ErrJobNotActive struct{ msg string }
 
 func (e *ErrJobNotActive) Error() string { return e.msg }
 
-// Run initiates the execution of a Linux process.
+// Run assigns a UUID to a Linux process and initiates its execution.
 func (w *Worker) Run(job Job) string {
-	jobID := shortuuid.New()
-	w.log.addEntry(jobID)
+	id := shortuuid.New()
+	w.log.addEntry(id)
 
-	go w.execJob(jobID, job)
+	go w.execJob(id, job)
 
-	return jobID
+	return id
 }
 
 func (w *Worker) execJob(id string, job Job) {
@@ -95,7 +96,7 @@ func (w *Worker) execJob(id string, job Job) {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		w.log.setStatus(id, statusError)
+		w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err.Error()))
 		return
 	}
 
@@ -104,7 +105,7 @@ func (w *Worker) execJob(id string, job Job) {
 
 	err = cmd.Start()
 	if err != nil {
-		w.log.setStatus(id, statusError)
+		w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err.Error()))
 		return
 	}
 
@@ -115,7 +116,7 @@ func (w *Worker) execJob(id string, job Job) {
 	if err != nil {
 		// Prefer to keep 'kill' status if the process was terminated.
 		if cmd.ProcessState.ExitCode() != -1 {
-			w.log.setStatus(id, statusError)
+			w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err.Error()))
 		}
 		return
 	}

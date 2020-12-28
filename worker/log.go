@@ -28,7 +28,16 @@ func (log *log) addEntry(id string) {
 	log.mu.Lock()
 	defer log.mu.Unlock()
 
-	log.entries[id] = &logEntry{status: statusActive, output: bytes.NewBuffer([]byte(""))}
+	log.entries[id] = &logEntry{status: statusActive, output: bytes.NewBuffer([]byte(nil))}
+}
+
+func (log *log) getEntryLocked(id string) (*logEntry, error) {
+	entry, ok := log.entries[id]
+	if !ok {
+		return nil, &ErrJobNotFound{"job not found"}
+	}
+
+	return entry, nil
 }
 
 func (log *log) setStatus(id, status string) error {
@@ -66,13 +75,4 @@ func (log *log) getOutputBuffer(id string) (*bytes.Buffer, error) {
 	}
 
 	return entry.output, nil
-}
-
-func (log *log) getEntryLocked(id string) (*logEntry, error) {
-	entry, ok := log.entries[id]
-	if !ok {
-		return nil, &ErrJobNotFound{"job not found"}
-	}
-
-	return entry, nil
 }

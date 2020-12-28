@@ -95,13 +95,13 @@ func (w *Worker) execJob(id string, job Job) {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		w.log.setStatus(id, err.Error())
+		w.log.setStatus(id, statusError)
 		return
 	}
 
 	err = cmd.Start()
 	if err != nil {
-		w.log.setStatus(id, err.Error())
+		w.log.setStatus(id, statusError)
 		return
 	}
 

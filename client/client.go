@@ -114,7 +114,7 @@ func (c *Client) GetJobOutput(ctx *cli.Context) error {
 		return err
 	}
 
-	fmt.Println(responseBody)
+	fmt.Print(responseBody)
 
 	return nil
 }

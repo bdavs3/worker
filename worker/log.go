@@ -5,13 +5,13 @@ import (
 	"sync"
 )
 
-// log contains a map that pairs jobs with their status and output.
+// log maps Linux processes to their status and output.
 type log struct {
 	entries map[string]*logEntry
 	mu      sync.RWMutex
 }
 
-// logEntry is a struct containing the status and output of a process.
+// logEntry represent's a Linux process's status and output.
 type logEntry struct {
 	status string
 	output *bytes.Buffer

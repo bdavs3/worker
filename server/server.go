@@ -12,7 +12,10 @@ import (
 )
 
 // TODO (next): Change to 443 once serving with TLS.
-const port = "8080"
+const (
+	port    = "8080"
+	idMatch = "[a-zA-Z0-9]*"
+)
 
 func main() {
 	worker := worker.NewWorker()
@@ -21,9 +24,9 @@ func main() {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/jobs/run", auth.Secure(handler.PostJob)).Methods(http.MethodPost)
-	router.HandleFunc("/jobs/{id}/status", auth.Secure(handler.GetJobStatus)).Methods(http.MethodGet)
-	router.HandleFunc("/jobs/{id}/out", auth.Secure(handler.GetJobOutput)).Methods(http.MethodGet)
-	router.HandleFunc("/jobs/{id}/kill", auth.Secure(handler.KillJob)).Methods(http.MethodPut)
+	router.HandleFunc("/jobs/{id:"+idMatch+"}/status", auth.Secure(handler.GetJobStatus)).Methods(http.MethodGet)
+	router.HandleFunc("/jobs/{id:"+idMatch+"}/out", auth.Secure(handler.GetJobOutput)).Methods(http.MethodGet)
+	router.HandleFunc("/jobs/{id:"+idMatch+"}/kill", auth.Secure(handler.KillJob)).Methods(http.MethodPut)
 
 	fmt.Println("Listening...")
 	// TODO (next): ListenAndServeTLS by using a pre-generated private key

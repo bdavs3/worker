@@ -30,7 +30,7 @@ type JobWorker interface {
 type Worker struct {
 	log   *log
 	killC map[string]chan bool
-	mu    sync.RWMutex
+	mu    sync.Mutex
 }
 
 // NewWorker returns a Worker containing an empty log and channel map.
@@ -88,10 +88,10 @@ func (w *Worker) Run(job Job) string {
 }
 
 func (w *Worker) execJob(id string, job Job) {
-	ctx, cancel := context.WithCancel(context.Background())
+	cmdctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	cmd := exec.CommandContext(ctx, job.Command, job.Args...)
+	cmd := exec.CommandContext(cmdctx, job.Command, job.Args...)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -99,13 +99,16 @@ func (w *Worker) execJob(id string, job Job) {
 		return
 	}
 
+	// Interleaves stdout with stderr.
+	cmd.Stderr = cmd.Stdout
+
 	err = cmd.Start()
 	if err != nil {
 		w.log.setStatus(id, statusError)
 		return
 	}
 
-	go w.listenForKill(ctx, cancel, id)
+	go w.listenForKill(cmdctx, cancel, id)
 	go w.writeOutput(id, stdout)
 
 	err = cmd.Wait()
@@ -120,10 +123,11 @@ func (w *Worker) execJob(id string, job Job) {
 	w.log.setStatus(id, statusComplete)
 }
 
-// listenForKill calls the provided CancelFunc if the worker's channel associated
-// with the specified ID receives a value.
+// listenForKill calls the provided CancelFunc if the channel associated with
+// the specified ID receives a value.
 func (w *Worker) listenForKill(ctx context.Context, cancel context.CancelFunc, id string) {
 	w.killC[id] = make(chan bool)
+
 	w.mu.Lock()
 	killC := w.killC[id]
 	w.mu.Unlock()
@@ -133,7 +137,7 @@ func (w *Worker) listenForKill(ctx context.Context, cancel context.CancelFunc, i
 		cancel()
 		w.log.setStatus(id, statusKilled)
 	case <-ctx.Done():
-		// Job execution completed. Stop listening.
+		// Job execution completed. Do nothing and proceed.
 	}
 
 	w.mu.Lock()

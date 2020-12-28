@@ -2,10 +2,12 @@ package worker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
 	"sync"
+	"time"
 
 	"github.com/lithammer/shortuuid"
 )
@@ -20,7 +22,7 @@ const (
 // JobWorker implements methods to run/terminate Linux processes and
 // query their output/status.
 type JobWorker interface {
-	Run(job Job) string
+	Run(job Job, reqComplete chan bool) string
 	Status(id string) (string, error)
 	Out(id string) (string, error)
 	Kill(id string) (string, error)
@@ -46,10 +48,10 @@ func NewWorker() *Worker {
 // independently.
 type DummyWorker struct{}
 
-func (dw *DummyWorker) Run(job Job) string               { return "" }
-func (dw *DummyWorker) Status(id string) (string, error) { return "", nil }
-func (dw *DummyWorker) Out(id string) (string, error)    { return "", nil }
-func (dw *DummyWorker) Kill(id string) (string, error)   { return "", nil }
+func (dw *DummyWorker) Run(job Job, reqComplete chan bool) string { return "" }
+func (dw *DummyWorker) Status(id string) (string, error)          { return "", nil }
+func (dw *DummyWorker) Out(id string) (string, error)             { return "", nil }
+func (dw *DummyWorker) Kill(id string) (string, error)            { return "", nil }
 
 // Job represents a Linux process to be handled by the worker library.
 type Job struct {
@@ -79,9 +81,12 @@ type ErrJobNotActive struct{ msg string }
 func (e *ErrJobNotActive) Error() string { return e.msg }
 
 // Run assigns a UUID to a Linux process and initiates its execution.
-func (w *Worker) Run(job Job) string {
+func (w *Worker) Run(job Job, reqComplete chan bool) string {
 	id := shortuuid.New()
 	w.log.addEntry(id)
+
+	// Requests may be cancelled up until the command starts executing.
+	reqComplete <- true
 
 	go w.execJob(id, job)
 
@@ -100,7 +105,7 @@ func (w *Worker) execJob(id string, job Job) {
 		return
 	}
 
-	// Interleaves stdout with stderr.
+	// Direct stderr through stdout to interleave them as expected by command order.
 	cmd.Stderr = cmd.Stdout
 
 	err = cmd.Start()
@@ -127,9 +132,8 @@ func (w *Worker) execJob(id string, job Job) {
 // listenForKill calls the provided CancelFunc if the channel associated with
 // the specified ID receives a value.
 func (w *Worker) listenForKill(ctx context.Context, cancel context.CancelFunc, id string) {
-	w.killC[id] = make(chan bool)
-
 	w.mu.Lock()
+	w.killC[id] = make(chan bool)
 	killC := w.killC[id]
 	w.mu.Unlock()
 
@@ -185,6 +189,11 @@ func (w *Worker) Kill(id string) (string, error) {
 		return "", &ErrJobNotActive{"job not active"}
 	}
 	killC <- true
+
+	time.Sleep(25 * time.Millisecond)
+	if status, err := w.Status(id); err != nil || status != statusKilled {
+		return "", errors.New("job not killed before timeout")
+	}
 
 	return statusKilled, nil
 }

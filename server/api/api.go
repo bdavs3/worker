@@ -41,8 +41,15 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	id := h.Worker.Run(job)
-	fmt.Fprint(w, id)
+	reqComplete := make(chan bool, 1)
+	id := h.Worker.Run(job, reqComplete)
+
+	select {
+	case <-reqComplete:
+		fmt.Fprint(w, id)
+	case <-r.Context().Done():
+		// Request cancelled.
+	}
 }
 
 // GetJobStatus responds with the status of the given job.

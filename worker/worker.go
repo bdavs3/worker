@@ -19,7 +19,7 @@ const (
 	statusKilled   = "killed"
 )
 
-// JobWorker implements methods to run/terminate Linux processes and
+// A JobWorker implements methods to run/terminate Linux processes and
 // query their output/status.
 type JobWorker interface {
 	Run(job Job, reqComplete chan bool) string
@@ -75,7 +75,7 @@ func (w *Worker) Run(job Job, reqComplete chan bool) string {
 	id := shortuuid.New()
 	w.log.addEntry(id)
 
-	// Requests may be cancelled up until the command starts executing.
+	// Requests may be cancelled up until this point.
 	reqComplete <- true
 
 	go w.execJob(id, job)

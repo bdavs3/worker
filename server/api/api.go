@@ -28,16 +28,14 @@ func NewHandler(worker worker.JobWorker) *Handler {
 func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("unable to read request"))
+		http.Error(w, "unable to read request", http.StatusBadRequest)
 		return
 	}
 
 	var job worker.Job
 	err = json.Unmarshal(reqBody, &job)
 	if err != nil || len(job.Command) == 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("request does not contain a valid job"))
+		http.Error(w, "request does not contain a valid job", http.StatusBadRequest)
 		return
 	}
 
@@ -58,8 +56,7 @@ func (h *Handler) GetJobStatus(w http.ResponseWriter, r *http.Request) {
 
 	status, err := h.Worker.Status(id)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(err.Error()))
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -72,8 +69,7 @@ func (h *Handler) GetJobOutput(w http.ResponseWriter, r *http.Request) {
 
 	output, err := h.Worker.Out(id)
 	if err != nil {
-		w.WriteHeader(http.StatusNotFound)
-		w.Write([]byte(err.Error()))
+		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
@@ -91,11 +87,10 @@ func (h *Handler) KillJob(w http.ResponseWriter, r *http.Request) {
 	}
 	switch err.(type) {
 	case *worker.ErrJobNotActive:
-		w.WriteHeader(http.StatusConflict)
+		http.Error(w, err.Error(), http.StatusConflict)
 	case *worker.ErrJobNotFound:
-		w.WriteHeader(http.StatusNotFound)
+		http.Error(w, err.Error(), http.StatusNotFound)
 	default:
-		w.WriteHeader(http.StatusInternalServerError)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
-	w.Write([]byte(err.Error()))
 }

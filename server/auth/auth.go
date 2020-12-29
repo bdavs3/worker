@@ -19,8 +19,7 @@ func Secure(handler http.HandlerFunc) http.HandlerFunc {
 		username, pw, ok := r.BasicAuth()
 
 		if !ok || !validate(username, pw) {
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte("invalid credentials: access denied"))
+			http.Error(w, "invalid credentials: access denied", http.StatusUnauthorized)
 			return
 		}
 

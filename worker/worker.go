@@ -48,10 +48,13 @@ func NewWorker() *Worker {
 // independently.
 type DummyWorker struct{}
 
-func (dw *DummyWorker) Run(job Job, reqComplete chan bool) string { return "" }
-func (dw *DummyWorker) Status(id string) (string, error)          { return "", nil }
-func (dw *DummyWorker) Out(id string) (string, error)             { return "", nil }
-func (dw *DummyWorker) Kill(id string) (string, error)            { return "", nil }
+func (dw *DummyWorker) Run(job Job, reqComplete chan bool) string {
+	reqComplete <- true
+	return ""
+}
+func (dw *DummyWorker) Status(id string) (string, error) { return "", nil }
+func (dw *DummyWorker) Out(id string) (string, error)    { return "", nil }
+func (dw *DummyWorker) Kill(id string) (string, error)   { return "", nil }
 
 // Job represents a Linux process to be handled by the worker library.
 type Job struct {

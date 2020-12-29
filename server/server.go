@@ -19,7 +19,8 @@ const (
 
 func main() {
 	worker := worker.NewWorker()
-	handler := api.NewHandler(worker)
+	auth := auth.NewAuth()
+	handler := api.NewHandler(worker, auth)
 
 	router := mux.NewRouter()
 

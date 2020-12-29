@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
 	"os/exec"
 	"sync"
 	"time"
@@ -109,7 +108,7 @@ func (w *Worker) execJob(id string, job Job) {
 	}
 
 	go w.listenForKill(cmdctx, cancel, id)
-	go w.writeOutput(id, stdout)
+	w.writeOutput(id, stdout)
 
 	err = cmd.Wait()
 	if err != nil {
@@ -151,10 +150,6 @@ func (w *Worker) writeOutput(id string, r io.ReadCloser) {
 	for {
 		n, err := r.Read(bytes)
 		if err != nil {
-			// Keep 'killed' status if the error results from the job's termination.
-			if _, ok := err.(*os.PathError); ok {
-				return
-			}
 			if err == io.EOF {
 				return
 			}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"sync"
 	"time"
@@ -134,6 +135,7 @@ func (w *Worker) listenForKill(ctx context.Context, cancel context.CancelFunc, i
 	case <-killC:
 		cancel()
 		w.log.setStatus(id, statusKilled)
+		killC <- true // Reply on the channel to signify that the job has been killed.
 	case <-ctx.Done():
 		// Job execution completed. Do nothing and proceed.
 	}
@@ -149,6 +151,10 @@ func (w *Worker) writeOutput(id string, r io.ReadCloser) {
 	for {
 		n, err := r.Read(bytes)
 		if err != nil {
+			// Keep 'killed' status if the error results from the job's termination.
+			if _, ok := err.(*os.PathError); ok {
+				return
+			}
 			if err == io.EOF {
 				return
 			}
@@ -194,10 +200,12 @@ func (w *Worker) Kill(id string) (string, error) {
 	}
 	killC <- true
 
-	time.Sleep(25 * time.Millisecond)
-	if status, err := w.Status(id); err != nil || status != statusKilled {
+	// Await verification that the job has been killed, or return an error after
+	// a timeout.
+	select {
+	case <-killC:
+		return statusKilled, nil
+	case <-time.After(50 * time.Millisecond):
 		return "", errors.New("job not killed before timeout")
 	}
-
-	return statusKilled, nil
 }

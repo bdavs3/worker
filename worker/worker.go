@@ -59,16 +59,6 @@ type Job struct {
 	Args    []string `json:"args"`
 }
 
-// ErrOutputPipe occurs when the worker's StdoutPipe fails to be established.
-type ErrOutputPipe struct{ msg string }
-
-func (e *ErrOutputPipe) Error() string { return e.msg }
-
-// ErrInvalidCmd occurs when a job cannot be started due to bad syntax.
-type ErrInvalidCmd struct{ msg string }
-
-func (e *ErrInvalidCmd) Error() string { return e.msg }
-
 // ErrJobNotFound occurs when a job cannot be found in the worker log.
 type ErrJobNotFound struct{ msg string }
 

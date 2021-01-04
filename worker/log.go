@@ -73,8 +73,7 @@ func (log *log) appendOutput(id string, output []byte) error {
 		return err
 	}
 
-	bytes := []byte(entry.output)
-	entry.output = string(append(bytes, output...))
+	entry.output += string(output)
 
 	return nil
 }

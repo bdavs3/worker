@@ -94,7 +94,7 @@ func (w *Worker) execJob(id string, job Job) {
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err.Error()))
+		w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err))
 		return
 	}
 
@@ -103,7 +103,7 @@ func (w *Worker) execJob(id string, job Job) {
 
 	err = cmd.Start()
 	if err != nil {
-		w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err.Error()))
+		w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err))
 		return
 	}
 
@@ -113,8 +113,9 @@ func (w *Worker) execJob(id string, job Job) {
 	err = cmd.Wait()
 	if err != nil {
 		// Prefer to keep 'kill' status if the process was terminated.
-		if cmd.ProcessState.ExitCode() != -1 {
-			w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err.Error()))
+		status, _ := w.log.getStatus(id)
+		if status != statusKilled {
+			w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err))
 		}
 		return
 	}

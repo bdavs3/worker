@@ -14,7 +14,7 @@ import (
 // TODO (next): Change to 443 once serving with TLS.
 const (
 	port    = "8080"
-	idMatch = "[a-zA-Z0-9]*"
+	idMatch = "[a-zA-Z0-9]+"
 )
 
 func main() {

@@ -14,7 +14,7 @@ const (
 )
 
 // Secure enforces user authentication.
-func Secure(handler http.HandlerFunc) http.HandlerFunc {
+func Secure(handler http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		username, pw, ok := r.BasicAuth()
 
@@ -23,7 +23,7 @@ func Secure(handler http.HandlerFunc) http.HandlerFunc {
 			return
 		}
 
-		handler(w, r)
+		handler.ServeHTTP(w, r)
 	}
 }
 

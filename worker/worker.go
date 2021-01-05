@@ -155,11 +155,13 @@ func (w *Worker) writeOutput(id string, r io.ReadCloser) {
 				return
 			}
 			w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err.Error()))
+			return
 		}
 		if n > 0 {
 			err := w.log.appendOutput(id, bytes[:n])
 			if err != nil {
 				w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err.Error()))
+				return
 			}
 		}
 	}

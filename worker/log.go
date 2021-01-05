@@ -14,6 +14,7 @@ type log struct {
 type logEntry struct {
 	status string
 	output string
+	killC  chan bool
 }
 
 // newLog returns a log containing an initialized entry map.
@@ -27,7 +28,7 @@ func (log *log) addEntry(id string) {
 	log.mu.Lock()
 	defer log.mu.Unlock()
 
-	log.entries[id] = &logEntry{status: statusActive}
+	log.entries[id] = &logEntry{status: statusActive, killC: make(chan bool)}
 }
 
 func (log *log) getEntryLocked(id string) (*logEntry, error) {
@@ -88,4 +89,16 @@ func (log *log) getOutput(id string) (string, error) {
 	}
 
 	return entry.output, nil
+}
+
+func (log *log) getKillC(id string) (chan bool, error) {
+	log.mu.RLock()
+	defer log.mu.RUnlock()
+
+	entry, err := log.getEntryLocked(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return entry.killC, nil
 }

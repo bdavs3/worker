@@ -31,16 +31,14 @@ type JobWorker interface {
 // Worker provides the machinery for executing and controlling Linux processes.
 // A zero value of this type is invalid - use NewWorker to create a new instance.
 type Worker struct {
-	log   *log
-	killC map[string]chan bool
-	mu    sync.Mutex
+	log *log
+	mu  sync.Mutex // Used to synchronize the termination of jobs.
 }
 
 // NewWorker returns a Worker containing an empty log and channel map.
 func NewWorker() *Worker {
 	return &Worker{
-		log:   newLog(),
-		killC: make(map[string]chan bool),
+		log: newLog(),
 	}
 }
 
@@ -120,10 +118,7 @@ func (w *Worker) execJob(id string, job Job) {
 // listenForKill calls the provided CancelFunc if the channel associated with
 // the specified ID receives a value.
 func (w *Worker) listenForKill(ctx context.Context, cancel context.CancelFunc, id string) {
-	w.mu.Lock()
-	w.killC[id] = make(chan bool)
-	killC := w.killC[id]
-	w.mu.Unlock()
+	killC, _ := w.log.getKillC(id)
 
 	select {
 	case <-killC:
@@ -133,10 +128,6 @@ func (w *Worker) listenForKill(ctx context.Context, cancel context.CancelFunc, i
 	case <-ctx.Done():
 		// Job execution completed. Do nothing and proceed.
 	}
-
-	w.mu.Lock()
-	delete(w.killC, id)
-	w.mu.Unlock()
 }
 
 // writeOutput writes to the worker's log using the provided io.Reader.
@@ -148,13 +139,13 @@ func (w *Worker) writeOutput(id string, r io.ReadCloser) {
 			if err == io.EOF {
 				return
 			}
-			w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err.Error()))
+			w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err))
 			return
 		}
 		if n > 0 {
 			err := w.log.appendOutput(id, bytes[:n])
 			if err != nil {
-				w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err.Error()))
+				w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err))
 				return
 			}
 		}
@@ -186,10 +177,15 @@ func (w *Worker) Kill(id string) (string, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	killC, ok := w.killC[id]
-	if !ok {
+	status, err := w.log.getStatus(id)
+	if err != nil {
+		return "", &ErrJobNotFound{"job not found"}
+	}
+	if status != statusActive {
 		return "", &ErrJobNotActive{"job not active"}
 	}
+
+	killC, _ := w.log.getKillC(id) // getStatus took care of 'not found' err.
 	killC <- true
 
 	// Await verification that the job has been killed, or return an error after

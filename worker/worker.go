@@ -22,7 +22,7 @@ const (
 // A JobWorker implements methods to run/terminate Linux processes and
 // query their output/status.
 type JobWorker interface {
-	Run(job Job, reqComplete chan bool) string
+	Run(job Job) string
 	Status(id string) (string, error)
 	Out(id string) (string, error)
 	Kill(id string) (string, error)
@@ -48,10 +48,7 @@ func NewWorker() *Worker {
 // independently.
 type DummyWorker struct{}
 
-func (dw *DummyWorker) Run(job Job, reqComplete chan bool) string {
-	reqComplete <- true
-	return ""
-}
+func (dw *DummyWorker) Run(job Job) string               { return "" }
 func (dw *DummyWorker) Status(id string) (string, error) { return "", nil }
 func (dw *DummyWorker) Out(id string) (string, error)    { return "", nil }
 func (dw *DummyWorker) Kill(id string) (string, error)   { return "", nil }
@@ -74,13 +71,10 @@ type ErrJobNotActive struct{ msg string }
 func (e *ErrJobNotActive) Error() string { return e.msg }
 
 // Run assigns a UUID to a Linux process and initiates its execution.
-func (w *Worker) Run(job Job, reqComplete chan bool) string {
+func (w *Worker) Run(job Job) string {
 	id := shortuuid.New()
+
 	w.log.addEntry(id)
-
-	// Requests may be cancelled up until this point.
-	reqComplete <- true
-
 	go w.execJob(id, job)
 
 	return id

@@ -16,15 +16,15 @@ type Handler struct {
 	Worker worker.JobWorker
 }
 
-// NewHandler returns a Handler with the provided JobWorker.
+// NewHandler creates a new Handler instance with the given JobWorker.
 func NewHandler(worker worker.JobWorker) *Handler {
 	return &Handler{
 		Worker: worker,
 	}
 }
 
-// PostJob initiates the worker's execution of the job contained in the
-// request and if successful, responds with the id assigned to that job.
+// PostJob initiates the worker's execution of the process contained in the
+// request and if successful, responds with the id assigned to that process.
 func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -43,7 +43,7 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, id)
 }
 
-// GetJobStatus responds with the status of the given job.
+// GetJobStatus responds with the status of the process represented by the given id.
 func (h *Handler) GetJobStatus(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
@@ -56,7 +56,7 @@ func (h *Handler) GetJobStatus(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, status)
 }
 
-// GetJobOutput responds with the output of the given job.
+// GetJobOutput responds with the output of the process represented by the given id.
 func (h *Handler) GetJobOutput(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
@@ -69,7 +69,7 @@ func (h *Handler) GetJobOutput(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, output)
 }
 
-// KillJob terminates a given job and responds with its new status.
+// KillJob terminates the job represented by the given id.
 func (h *Handler) KillJob(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 

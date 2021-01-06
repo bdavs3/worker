@@ -29,14 +29,14 @@ const (
 	timeout = 5 * time.Second
 )
 
-// Client contains a BaseURL to prepend to API endpoints and an HTTPClient
-// for making requests to those endpoints.
+// Client is an HTTP client for making requests to control and assess Linux
+// processes on the server. Use NewClient to create a new instance.
 type Client struct {
 	BaseURL    string
 	HTTPClient *http.Client
 }
 
-// NewClient initializes a Client struct with a default BaseURL and HTTPClient.
+// NewClient creates a new Client instance.
 func NewClient() *Client {
 	return &Client{
 		BaseURL:    host,
@@ -44,7 +44,7 @@ func NewClient() *Client {
 	}
 }
 
-// PostJob passes a job to the worker library for execution.
+// PostJob passes a Linux process to the worker library for execution.
 func (c *Client) PostJob(ctx *cli.Context) error {
 	if ctx.NArg() == 0 {
 		return errors.New("no job supplied to 'run' command")
@@ -74,7 +74,7 @@ func (c *Client) PostJob(ctx *cli.Context) error {
 	return nil
 }
 
-// GetJobStatus queries the status of a job being handled by the worker library.
+// GetJobStatus queries the status of a process being handled by the worker library.
 func (c *Client) GetJobStatus(ctx *cli.Context) error {
 	if ctx.NArg() != 1 {
 		return errors.New("no job ID supplied to 'status' command")
@@ -96,7 +96,7 @@ func (c *Client) GetJobStatus(ctx *cli.Context) error {
 	return nil
 }
 
-// GetJobOutput queries the output of a job being handled by the worker library.
+// GetJobOutput queries the output of a process being handled by the worker library.
 func (c *Client) GetJobOutput(ctx *cli.Context) error {
 	if ctx.NArg() != 1 {
 		return errors.New("no job ID supplied to 'out' command")
@@ -118,7 +118,7 @@ func (c *Client) GetJobOutput(ctx *cli.Context) error {
 	return nil
 }
 
-// KillJob terminates a job being handled by the worker library.
+// KillJob terminates a process being handled by the worker library.
 func (c *Client) KillJob(ctx *cli.Context) error {
 	if ctx.NArg() != 1 {
 		return errors.New("no job ID supplied to 'kill' command")
@@ -140,8 +140,8 @@ func (c *Client) KillJob(ctx *cli.Context) error {
 	return nil
 }
 
-// makeRequestWithAuth makes an HTTP request to a given endpoint after setting
-// the request's Authorization header. It reads the response body and returns
+// makeRequestWithAuth makes an HTTP request to the given endpoint after setting
+// the request's Authorization header. It then reads the response body and returns
 // it as a string.
 func (c *Client) makeRequestWithAuth(method, endpoint string, requestBody io.Reader) (string, error) {
 	req, err := http.NewRequest(

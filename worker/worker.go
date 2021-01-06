@@ -32,10 +32,10 @@ type JobWorker interface {
 // A zero value of this type is invalid - use NewWorker to create a new instance.
 type Worker struct {
 	log *log
-	mu  sync.Mutex // Used to synchronize the termination of jobs.
+	mu  sync.Mutex // Used to synchronize the termination of processes.
 }
 
-// NewWorker returns a Worker containing an empty log and channel map.
+// NewWorker creates a new instance of the process worker.
 func NewWorker() *Worker {
 	return &Worker{
 		log: newLog(),
@@ -57,18 +57,18 @@ type Job struct {
 	Args    []string `json:"args"`
 }
 
-// ErrJobNotFound occurs when a job cannot be found in the worker log.
+// ErrJobNotFound occurs when a process cannot be found in the worker log.
 type ErrJobNotFound struct{ msg string }
 
 func (e *ErrJobNotFound) Error() string { return e.msg }
 
-// ErrJobNotActive occurs when termination is attempted on a job that
+// ErrJobNotActive occurs when termination is attempted on a process that
 // is no longer active.
 type ErrJobNotActive struct{ msg string }
 
 func (e *ErrJobNotActive) Error() string { return e.msg }
 
-// Run assigns a UUID to a Linux process and initiates its execution.
+// Run initiates the execution of a Linux process.
 func (w *Worker) Run(job Job) string {
 	id := shortuuid.New()
 
@@ -115,8 +115,7 @@ func (w *Worker) execJob(id string, job Job) {
 	w.log.setStatus(id, statusComplete)
 }
 
-// listenForKill calls the provided CancelFunc if the channel associated with
-// the specified ID receives a value.
+// listenForKill is used to terminate a running process specified by Kill.
 func (w *Worker) listenForKill(ctx context.Context, cancel context.CancelFunc, id string) {
 	killC, _ := w.log.getKillC(id)
 
@@ -126,11 +125,12 @@ func (w *Worker) listenForKill(ctx context.Context, cancel context.CancelFunc, i
 		w.log.setStatus(id, statusKilled)
 		killC <- true // Reply on the channel to signify that the job has been killed.
 	case <-ctx.Done():
-		// Job execution completed. Do nothing and proceed.
+		// Process execution completed. Do nothing and proceed.
 	}
 }
 
-// writeOutput writes to the worker's log using the provided io.Reader.
+// writeOutput reads process output from r and writes it to the log entry
+// associated with the given id.
 func (w *Worker) writeOutput(id string, r io.ReadCloser) {
 	bytes := make([]byte, 1024)
 	for {
@@ -152,7 +152,7 @@ func (w *Worker) writeOutput(id string, r io.ReadCloser) {
 	}
 }
 
-// Status queries the log for the status of a given process.
+// Status returns the status of the process represented by the given id.
 func (w *Worker) Status(id string) (string, error) {
 	status, err := w.log.getStatus(id)
 	if err != nil {
@@ -162,7 +162,7 @@ func (w *Worker) Status(id string) (string, error) {
 	return status, nil
 }
 
-// Out queries the log for the output of a given process.
+// Out returns the output of the process represented by the given id.
 func (w *Worker) Out(id string) (string, error) {
 	out, err := w.log.getOutput(id)
 	if err != nil {
@@ -172,7 +172,7 @@ func (w *Worker) Out(id string) (string, error) {
 	return out, nil
 }
 
-// Kill terminates a given process using the channel associated with the provided ID.
+// Kill terminates the process represented by the given id.
 func (w *Worker) Kill(id string) (string, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -188,8 +188,6 @@ func (w *Worker) Kill(id string) (string, error) {
 	killC, _ := w.log.getKillC(id) // getStatus took care of 'not found' err.
 	killC <- true
 
-	// Await verification that the job has been killed, or return an error after
-	// a timeout.
 	select {
 	case <-killC:
 		return statusKilled, nil

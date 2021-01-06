@@ -4,20 +4,21 @@ import (
 	"sync"
 )
 
-// log maps Linux processes to their status and output.
+// A log contains information about Linux processes. A zero value of this
+// type is invalid - Use newLog to create a new instance.
 type log struct {
 	entries map[string]*logEntry
 	mu      sync.RWMutex
 }
 
-// logEntry represent's a Linux process's status and output.
+// A logEntry contains data relevant to a singular Linux process.
 type logEntry struct {
 	status string
 	output string
 	killC  chan bool
 }
 
-// newLog returns a log containing an initialized entry map.
+// newLog creates a new instance of the process log.
 func newLog() *log {
 	return &log{
 		entries: make(map[string]*logEntry),

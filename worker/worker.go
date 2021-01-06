@@ -115,17 +115,23 @@ func (w *Worker) execJob(id string, job Job) {
 	w.log.setStatus(id, statusComplete)
 }
 
-// listenForKill is used to terminate a running process specified by Kill.
+// listenForKill is used to terminate a running process that was specified by
+// a call to Kill.
 func (w *Worker) listenForKill(ctx context.Context, cancel context.CancelFunc, id string) {
-	killC, _ := w.log.getKillC(id)
+	killC := w.log.makeKillC(id)
 
+	// The reason that nullifyKillC is not called after the select is to
+	// prevent concurrent calls to Kill from blocking if they manage to send to
+	// the channel before it is nullified.
 	select {
 	case <-killC:
 		cancel()
 		w.log.setStatus(id, statusKilled)
+		w.log.nullifyKillC(id)
 		killC <- true // Reply on the channel to signify that the job has been killed.
 	case <-ctx.Done():
-		// Process execution completed. Do nothing and proceed.
+		// Process execution completed.
+		w.log.nullifyKillC(id)
 	}
 }
 
@@ -177,15 +183,11 @@ func (w *Worker) Kill(id string) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	status, err := w.log.getStatus(id)
+	killC, err := w.log.getKillC(id)
 	if err != nil {
-		return &ErrJobNotFound{"job not found"}
-	}
-	if status != statusActive {
-		return &ErrJobNotActive{"job not active"}
+		return err
 	}
 
-	killC, _ := w.log.getKillC(id) // getStatus took care of 'not found' err.
 	killC <- true
 
 	select {

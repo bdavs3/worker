@@ -29,7 +29,7 @@ func (log *log) addEntry(id string) {
 	log.mu.Lock()
 	defer log.mu.Unlock()
 
-	log.entries[id] = &logEntry{status: statusActive, killC: make(chan bool)}
+	log.entries[id] = &logEntry{status: statusActive}
 }
 
 func (log *log) getEntryLocked(id string) (*logEntry, error) {
@@ -92,6 +92,25 @@ func (log *log) getOutput(id string) (string, error) {
 	return entry.output, nil
 }
 
+func (log *log) makeKillC(id string) chan bool {
+	log.mu.Lock()
+	defer log.mu.Unlock()
+
+	entry, _ := log.getEntryLocked(id)
+
+	entry.killC = make(chan bool)
+	return entry.killC
+}
+
+func (log *log) nullifyKillC(id string) {
+	log.mu.Lock()
+	defer log.mu.Unlock()
+
+	entry, _ := log.getEntryLocked(id)
+
+	entry.killC = nil
+}
+
 func (log *log) getKillC(id string) (chan bool, error) {
 	log.mu.RLock()
 	defer log.mu.RUnlock()
@@ -99,6 +118,9 @@ func (log *log) getKillC(id string) (chan bool, error) {
 	entry, err := log.getEntryLocked(id)
 	if err != nil {
 		return nil, err
+	}
+	if entry.killC == nil {
+		return nil, &ErrJobNotActive{"job not active"}
 	}
 
 	return entry.killC, nil

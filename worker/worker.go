@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io"
 	"os/exec"
 	"sync"
 	"time"
@@ -84,23 +83,18 @@ func (w *Worker) execJob(id string, job Job) {
 
 	cmd := exec.CommandContext(cmdctx, job.Command, job.Args...)
 
-	stdout, err := cmd.StdoutPipe()
-	if err != nil {
-		w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err))
-		return
-	}
+	cmd.Stdout, _ = w.log.getOutputBuffer(id)
 
-	// Direct stderr through stdout to interleave them as expected by command order.
+	// Direct cmd.Stderr to cmd.Stdout to interleave them as expected by command order.
 	cmd.Stderr = cmd.Stdout
 
-	err = cmd.Start()
+	err := cmd.Start()
 	if err != nil {
 		w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err))
 		return
 	}
 
 	go w.listenForKill(cmdctx, cancel, id)
-	w.writeOutput(id, stdout)
 
 	err = cmd.Wait()
 	if err != nil {
@@ -115,46 +109,20 @@ func (w *Worker) execJob(id string, job Job) {
 	w.log.setStatus(id, statusComplete)
 }
 
-// listenForKill is used to terminate a running process that was specified by
+// listenForKill handles the termination of a running process when specified by
 // a call to Kill.
 func (w *Worker) listenForKill(ctx context.Context, cancel context.CancelFunc, id string) {
 	killC := w.log.makeKillC(id)
 
-	// The reason that nullifyKillC is not called after the select is to
-	// prevent concurrent calls to Kill from blocking if they manage to send to
-	// the channel before it is nullified.
 	select {
 	case <-killC:
 		cancel()
 		w.log.setStatus(id, statusKilled)
 		w.log.nullifyKillC(id)
-		killC <- true // Reply on the channel to signify that the job has been killed.
+		killC <- true // Reply on the channel to signify that the process has been killed.
 	case <-ctx.Done():
 		// Process execution completed.
 		w.log.nullifyKillC(id)
-	}
-}
-
-// writeOutput reads process output from r and writes it to the log entry
-// associated with the given id.
-func (w *Worker) writeOutput(id string, r io.ReadCloser) {
-	bytes := make([]byte, 1024)
-	for {
-		n, err := r.Read(bytes)
-		if err != nil {
-			if err == io.EOF {
-				return
-			}
-			w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err))
-			return
-		}
-		if n > 0 {
-			err := w.log.appendOutput(id, bytes[:n])
-			if err != nil {
-				w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err))
-				return
-			}
-		}
 	}
 }
 
@@ -170,12 +138,12 @@ func (w *Worker) Status(id string) (string, error) {
 
 // Out returns the output of the process represented by the given id.
 func (w *Worker) Out(id string) (string, error) {
-	out, err := w.log.getOutput(id)
+	out, err := w.log.getOutputBuffer(id)
 	if err != nil {
 		return "", err
 	}
 
-	return out, nil
+	return out.String(), nil
 }
 
 // Kill terminates the process represented by the given id.

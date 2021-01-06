@@ -13,7 +13,7 @@ const (
 	storedHash     = "$2a$10$P7GoVlD0fEu14OWE76dGzude2NLw0pi05Gzar6rm1b.oD04lcvyaq"
 )
 
-// Secure enforces user authentication.
+// Secure enforces user authentication on an HTTP Handler.
 func Secure(handler http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		username, pw, ok := r.BasicAuth()

@@ -73,9 +73,9 @@ func (h *Handler) GetJobOutput(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) KillJob(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
-	result, err := h.Worker.Kill(id)
+	err := h.Worker.Kill(id)
 	if err == nil {
-		fmt.Fprint(w, result)
+		fmt.Fprint(w, "job was succesfully killed")
 		return
 	}
 	switch err.(type) {

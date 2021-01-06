@@ -25,7 +25,7 @@ type JobWorker interface {
 	Run(job Job) string
 	Status(id string) (string, error)
 	Out(id string) (string, error)
-	Kill(id string) (string, error)
+	Kill(id string) error
 }
 
 // Worker provides the machinery for executing and controlling Linux processes.
@@ -49,7 +49,7 @@ type DummyWorker struct{}
 func (dw *DummyWorker) Run(job Job) string               { return "" }
 func (dw *DummyWorker) Status(id string) (string, error) { return "", nil }
 func (dw *DummyWorker) Out(id string) (string, error)    { return "", nil }
-func (dw *DummyWorker) Kill(id string) (string, error)   { return "", nil }
+func (dw *DummyWorker) Kill(id string) error             { return nil }
 
 // Job represents a Linux process to be handled by the worker library.
 type Job struct {
@@ -173,16 +173,16 @@ func (w *Worker) Out(id string) (string, error) {
 }
 
 // Kill terminates the process represented by the given id.
-func (w *Worker) Kill(id string) (string, error) {
+func (w *Worker) Kill(id string) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
 	status, err := w.log.getStatus(id)
 	if err != nil {
-		return "", &ErrJobNotFound{"job not found"}
+		return &ErrJobNotFound{"job not found"}
 	}
 	if status != statusActive {
-		return "", &ErrJobNotActive{"job not active"}
+		return &ErrJobNotActive{"job not active"}
 	}
 
 	killC, _ := w.log.getKillC(id) // getStatus took care of 'not found' err.
@@ -190,8 +190,8 @@ func (w *Worker) Kill(id string) (string, error) {
 
 	select {
 	case <-killC:
-		return statusKilled, nil
+		return nil
 	case <-time.After(50 * time.Millisecond):
-		return "", errors.New("job not killed before timeout")
+		return errors.New("job not killed before timeout")
 	}
 }

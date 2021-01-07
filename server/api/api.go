@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/bdavs3/worker/server/auth"
 	"github.com/bdavs3/worker/worker"
 
 	"github.com/gorilla/mux"
@@ -14,12 +15,14 @@ import (
 // Handler is an HTTP handler that manages processes on behalf of clients.
 type Handler struct {
 	Worker worker.JobWorker
+	Auth   auth.UserAuthLayer
 }
 
-// NewHandler creates a new Handler instance with the given JobWorker.
-func NewHandler(worker worker.JobWorker) *Handler {
+// NewHandler initalizes a Handler with the given JobWorker and UserAuthLayer.
+func NewHandler(worker worker.JobWorker, auth auth.UserAuthLayer) *Handler {
 	return &Handler{
 		Worker: worker,
+		Auth:   auth,
 	}
 }
 
@@ -40,6 +43,9 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := h.Worker.Run(job)
+	username, _, _ := r.BasicAuth()
+	h.Auth.SetOwner(username, id)
+
 	fmt.Fprint(w, id)
 }
 

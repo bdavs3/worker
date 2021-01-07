@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/bdavs3/worker/server/api"
+	"github.com/bdavs3/worker/server/auth"
 	"github.com/bdavs3/worker/worker"
 )
 
@@ -15,7 +16,8 @@ func TestAPIRequest(t *testing.T) {
 	// Using a DummyWorker allows the API to be tested without entangling it
 	// in the functionality of the worker library.
 	dummyWorker := &worker.DummyWorker{}
-	handler := api.NewHandler(dummyWorker)
+	auth := &auth.DummyAuth{}
+	handler := api.NewHandler(dummyWorker, auth)
 
 	var tests = []struct {
 		comment string

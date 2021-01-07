@@ -2,6 +2,8 @@ package client
 
 import (
 	"bytes"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,16 +18,14 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-// TODO (next): Change host protocol to 'https' and port to 443 once API
-// serves with TLS.
-
 // TODO (out of scope): Rather than using hard-coded user credentials, provide
 // the user with a way to create an account and log in. Once authenticated
 // with the API, the client could receive a session token that precludes the
 // need to authenticate on each subsequent request.
 
 const (
-	host    = "http://localhost:8080"
+	crtFile = "../worker.crt"
+	host    = "https://localhost:443"
 	timeout = 5 * time.Second
 )
 
@@ -37,11 +37,38 @@ type Client struct {
 }
 
 // NewClient creates a new Client instance.
-func NewClient() *Client {
-	return &Client{
-		BaseURL:    host,
-		HTTPClient: &http.Client{Timeout: timeout},
+func NewClient() (*Client, error) {
+	rootCAs, err := generateCertPool(crtFile)
+	if err != nil {
+		return nil, err
 	}
+
+	client := &Client{
+		BaseURL: host,
+		HTTPClient: &http.Client{
+			Timeout: timeout,
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					RootCAs: rootCAs,
+				},
+			},
+		},
+	}
+
+	return client, nil
+}
+
+// generaeteCertPool returns a CertPool containing the provided certificate.
+func generateCertPool(crtFile string) (*x509.CertPool, error) {
+	caCert, err := ioutil.ReadFile(crtFile)
+	if err != nil {
+		return nil, err
+	}
+
+	caCertPool := x509.NewCertPool()
+	caCertPool.AppendCertsFromPEM(caCert)
+
+	return caCertPool, err
 }
 
 // PostJob passes a Linux process to the worker library for execution.

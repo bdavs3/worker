@@ -4,13 +4,13 @@ import (
 	"log"
 	"os"
 
-	"github.com/bdavs3/worker/client"
+	"github.com/bdavs3/worker/services"
 
 	"github.com/urfave/cli/v2"
 )
 
 func main() {
-	client, err := client.NewClient()
+	workerService, err := services.NewWorkerService()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -25,25 +25,25 @@ func main() {
 				Name:    "run",
 				Aliases: []string{"r"},
 				Usage:   "give the server a Linux process to execute",
-				Action:  client.PostJob,
+				Action:  workerService.Run,
 			},
 			{
 				Name:    "status",
 				Aliases: []string{"s"},
-				Usage:   "get the status of a services by providing its ID",
-				Action:  client.GetJobStatus,
+				Usage:   "get the status of a services by providing its id",
+				Action:  workerService.Status,
 			},
 			{
 				Name:    "out",
 				Aliases: []string{"o"},
-				Usage:   "get the output of a services by providing its ID",
-				Action:  client.GetJobOutput,
+				Usage:   "get the output of a services by providing its id",
+				Action:  workerService.Out,
 			},
 			{
 				Name:    "kill",
 				Aliases: []string{"k"},
-				Usage:   "terminate a services by providing its ID",
-				Action:  client.KillJob,
+				Usage:   "terminate a services by providing its id",
+				Action:  workerService.Kill,
 			},
 		},
 	}

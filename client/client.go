@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -14,8 +13,6 @@ import (
 	"time"
 
 	"github.com/bdavs3/worker/worker"
-
-	"github.com/urfave/cli/v2"
 )
 
 // TODO (out of scope): Rather than using hard-coded user credentials, provide
@@ -72,19 +69,10 @@ func generateCertPool(crtFile string) (*x509.CertPool, error) {
 }
 
 // PostJob passes a Linux process to the worker library for execution.
-func (c *Client) PostJob(ctx *cli.Context) error {
-	if ctx.NArg() == 0 {
-		return errors.New("no job supplied to 'run' command")
-	}
-
-	job := worker.Job{
-		Command: ctx.Args().Get(0),
-		Args:    ctx.Args().Slice()[1:],
-	}
-
+func (c *Client) PostJob(job worker.Job) (string, error) {
 	requestBody, err := json.Marshal(job)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	responseBody, err := c.makeRequestWithAuth(
@@ -93,78 +81,52 @@ func (c *Client) PostJob(ctx *cli.Context) error {
 		bytes.NewBuffer(requestBody),
 	)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	fmt.Println(responseBody)
-
-	return nil
+	return responseBody, nil
 }
 
 // GetJobStatus queries the status of a process being handled by the worker library.
-func (c *Client) GetJobStatus(ctx *cli.Context) error {
-	if ctx.NArg() != 1 {
-		return errors.New("no job ID supplied to 'status' command")
-	}
-
-	jobID := ctx.Args().Get(0)
-
+func (c *Client) GetJobStatus(id string) (string, error) {
 	responseBody, err := c.makeRequestWithAuth(
 		http.MethodGet,
-		fmt.Sprintf("/jobs/%s/status", jobID),
+		fmt.Sprintf("/jobs/%s/status", id),
 		nil,
 	)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	fmt.Println(responseBody)
-
-	return nil
+	return responseBody, nil
 }
 
 // GetJobOutput queries the output of a process being handled by the worker library.
-func (c *Client) GetJobOutput(ctx *cli.Context) error {
-	if ctx.NArg() != 1 {
-		return errors.New("no job ID supplied to 'out' command")
-	}
-
-	jobID := ctx.Args().Get(0)
-
+func (c *Client) GetJobOutput(id string) (string, error) {
 	responseBody, err := c.makeRequestWithAuth(
 		http.MethodGet,
-		fmt.Sprintf("/jobs/%s/out", jobID),
+		fmt.Sprintf("/jobs/%s/out", id),
 		nil,
 	)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	fmt.Print(responseBody)
-
-	return nil
+	return responseBody, nil
 }
 
 // KillJob terminates a process being handled by the worker library.
-func (c *Client) KillJob(ctx *cli.Context) error {
-	if ctx.NArg() != 1 {
-		return errors.New("no job ID supplied to 'kill' command")
-	}
-
-	jobID := ctx.Args().Get(0)
-
+func (c *Client) KillJob(id string) (string, error) {
 	responseBody, err := c.makeRequestWithAuth(
 		http.MethodPut,
-		fmt.Sprintf("/jobs/%s/kill", jobID),
+		fmt.Sprintf("/jobs/%s/kill", id),
 		nil,
 	)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	fmt.Println(responseBody)
-
-	return nil
+	return responseBody, nil
 }
 
 // makeRequestWithAuth makes an HTTP request to the given endpoint after setting

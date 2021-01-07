@@ -11,6 +11,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/bdavs3/worker/server/api"
 	"github.com/bdavs3/worker/worker"
 
 	"github.com/urfave/cli/v2"
@@ -60,7 +61,7 @@ func (c *Client) PostJob(ctx *cli.Context) error {
 		return err
 	}
 
-	responseBody, err := c.makeRequestWithAuth(
+	response, err := c.makeRequestWithAuth(
 		http.MethodPost,
 		"/jobs/run",
 		bytes.NewBuffer(requestBody),
@@ -69,7 +70,7 @@ func (c *Client) PostJob(ctx *cli.Context) error {
 		return err
 	}
 
-	fmt.Println(responseBody)
+	fmt.Println(response.ID)
 
 	return nil
 }
@@ -82,7 +83,7 @@ func (c *Client) GetJobStatus(ctx *cli.Context) error {
 
 	jobID := ctx.Args().Get(0)
 
-	responseBody, err := c.makeRequestWithAuth(
+	response, err := c.makeRequestWithAuth(
 		http.MethodGet,
 		fmt.Sprintf("/jobs/%s/status", jobID),
 		nil,
@@ -90,8 +91,11 @@ func (c *Client) GetJobStatus(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	if response.ID != jobID {
+		return errors.New("response contains incorrect job id")
+	}
 
-	fmt.Println(responseBody)
+	fmt.Println(response.Status)
 
 	return nil
 }
@@ -104,7 +108,7 @@ func (c *Client) GetJobOutput(ctx *cli.Context) error {
 
 	jobID := ctx.Args().Get(0)
 
-	responseBody, err := c.makeRequestWithAuth(
+	response, err := c.makeRequestWithAuth(
 		http.MethodGet,
 		fmt.Sprintf("/jobs/%s/out", jobID),
 		nil,
@@ -112,8 +116,11 @@ func (c *Client) GetJobOutput(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	if response.ID != jobID {
+		return errors.New("response contains incorrect job id")
+	}
 
-	fmt.Print(responseBody)
+	fmt.Print(response.Output)
 
 	return nil
 }
@@ -126,7 +133,7 @@ func (c *Client) KillJob(ctx *cli.Context) error {
 
 	jobID := ctx.Args().Get(0)
 
-	responseBody, err := c.makeRequestWithAuth(
+	response, err := c.makeRequestWithAuth(
 		http.MethodPut,
 		fmt.Sprintf("/jobs/%s/kill", jobID),
 		nil,
@@ -134,41 +141,46 @@ func (c *Client) KillJob(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+	if response.ID != jobID {
+		return errors.New("response contains incorrect job id")
+	}
 
-	fmt.Println(responseBody)
+	fmt.Println(response.Status)
 
 	return nil
 }
 
-// makeRequestWithAuth makes an HTTP request to the given endpoint after setting
-// the request's Authorization header. It then reads the response body and returns
-// it as a string.
-func (c *Client) makeRequestWithAuth(method, endpoint string, requestBody io.Reader) (string, error) {
+// makeRequestWithAuth makes an HTTP request to the given endpoint
+// after setting the Authorization header. It then returns the response.
+func (c *Client) makeRequestWithAuth(method, endpoint string, requestBody io.Reader) (*api.Response, error) {
 	req, err := http.NewRequest(
 		method,
 		c.BaseURL+endpoint,
 		requestBody,
 	)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	req.SetBasicAuth(os.Getenv("username"), os.Getenv("pw"))
 
 	resp, err := c.HTTPClient.Do(req)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return "", fmt.Errorf("%s\n%s", http.StatusText(resp.StatusCode), body)
+		return nil, fmt.Errorf("%s\n%s", http.StatusText(resp.StatusCode), body)
 	}
 
-	return string(body), nil
+	var response *api.Response
+	json.Unmarshal(body, &response)
+
+	return response, nil
 }

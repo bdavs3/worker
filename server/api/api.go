@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 
@@ -10,6 +9,14 @@ import (
 
 	"github.com/gorilla/mux"
 )
+
+// A Response contains information relevant to a particular process in the
+// worker library.
+type Response struct {
+	ID     string `json:"id"`
+	Status string `json:"status,omitempty"`
+	Output string `json:"output,omitempty"`
+}
 
 // Handler is an HTTP handler that manages processes on behalf of clients.
 type Handler struct {
@@ -40,7 +47,16 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := h.Worker.Run(job)
-	fmt.Fprint(w, id)
+
+	response := &Response{ID: id}
+
+	json, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "error marshalling json", http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(json)
 }
 
 // GetJobStatus responds with the status of the process represented by the given id.
@@ -53,7 +69,15 @@ func (h *Handler) GetJobStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprint(w, status)
+	response := &Response{ID: id, Status: status}
+
+	json, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "error marshalling json", http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(json)
 }
 
 // GetJobOutput responds with the output of the process represented by the given id.
@@ -66,7 +90,15 @@ func (h *Handler) GetJobOutput(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	fmt.Fprint(w, output)
+	response := &Response{ID: id, Output: output}
+
+	json, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "error marshalling json", http.StatusInternalServerError)
+		return
+	}
+
+	w.Write(json)
 }
 
 // KillJob terminates the job represented by the given id.
@@ -74,16 +106,25 @@ func (h *Handler) KillJob(w http.ResponseWriter, r *http.Request) {
 	id := mux.Vars(r)["id"]
 
 	err := h.Worker.Kill(id)
-	if err == nil {
-		fmt.Fprint(w, "job was succesfully killed")
+	if err != nil {
+		switch err.(type) {
+		case *worker.ErrJobNotActive:
+			http.Error(w, err.Error(), http.StatusConflict)
+		case *worker.ErrJobNotFound:
+			http.Error(w, err.Error(), http.StatusNotFound)
+		default:
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
 		return
 	}
-	switch err.(type) {
-	case *worker.ErrJobNotActive:
-		http.Error(w, err.Error(), http.StatusConflict)
-	case *worker.ErrJobNotFound:
-		http.Error(w, err.Error(), http.StatusNotFound)
-	default:
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+
+	response := &Response{ID: id, Status: "job successfully killed"}
+
+	json, err := json.Marshal(response)
+	if err != nil {
+		http.Error(w, "error marshalling json", http.StatusInternalServerError)
+		return
 	}
+
+	w.Write(json)
 }

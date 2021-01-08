@@ -1,7 +1,5 @@
 # Worker
 
-**Warning**: This README describes proposed usage of the service, which is still in development.
-
 `worker` is a command-line service for running arbitrary Linux processes.
 
 To use it, first run the server:
@@ -21,10 +19,10 @@ In that same terminal instance, you may now begin scheduling jobs for the server
 
 ```sh
 $ ./worker run echo hello
-Ht9piRvJVMWq5CnTShXMkY # After a job is scheduled, its new ID is printed.
+Ht9piRvJVMWq5CnTShXMkY # After a job is scheduled, its id is printed.
 $ ./worker run echo world
 nya8Z45ei5BTkgWdqN3NWc
-$ ./worker out Ht9piRvJVMWq5CnTShXMkY # Use a job ID to query status/output.
+$ ./worker out Ht9piRvJVMWq5CnTShXMkY # Use a job id to query output.
 hello
 $ ./worker out nya8Z45ei5BTkgWdqN3NWc
 world

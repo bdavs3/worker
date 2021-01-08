@@ -33,19 +33,19 @@ func main() {
 			{
 				Name:    "status",
 				Aliases: []string{"s"},
-				Usage:   "get the status of a services by providing its id",
+				Usage:   "get the status of a process by providing its id",
 				Action:  workerService.status,
 			},
 			{
 				Name:    "out",
 				Aliases: []string{"o"},
-				Usage:   "get the output of a services by providing its id",
+				Usage:   "get the output of a process by providing its id",
 				Action:  workerService.out,
 			},
 			{
 				Name:    "kill",
 				Aliases: []string{"k"},
-				Usage:   "terminate a services by providing its id",
+				Usage:   "terminate a process by providing its id",
 				Action:  workerService.kill,
 			},
 		},

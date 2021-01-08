@@ -3,6 +3,7 @@ package auth
 import "sync"
 
 type ownershipTracker struct {
+	// The inner map employs the empty struct so it may be treated like a set.
 	ownerships map[string]map[string]struct{}
 	mu         sync.Mutex
 }

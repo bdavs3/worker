@@ -77,6 +77,6 @@ func validate(username, pw string) bool {
 
 // SetOwner designates the given user as the owner of the resource with the given id.
 func (a *Auth) SetOwner(username, id string) {
-	// TODO (out of scope): Owner relationships would normally be tracked in a database.
+	// TODO (out of scope): Track owner relationships in a database.
 	a.owners.setOwner(username, id)
 }

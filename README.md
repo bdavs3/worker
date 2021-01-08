@@ -21,12 +21,12 @@ In that same terminal instance, you may now begin scheduling jobs for the server
 
 ```sh
 $ ./worker run echo hello
-Job scheduled. JobID: 1
+Ht9piRvJVMWq5CnTShXMkY # After a job is scheduled, its new ID is printed.
 $ ./worker run echo world
-Job scheduled. JobID: 2
-$ ./worker out 1
+nya8Z45ei5BTkgWdqN3NWc
+$ ./worker out Ht9piRvJVMWq5CnTShXMkY # Use a job ID to query status/output.
 hello
-$ ./worker out 2
+$ ./worker out nya8Z45ei5BTkgWdqN3NWc
 world
 ```
 

@@ -4,25 +4,29 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/bdavs3/worker/server/api"
 	"github.com/bdavs3/worker/server/auth"
 	"github.com/bdavs3/worker/worker"
 
 	"github.com/gorilla/mux"
 )
 
+// TODO (next): Change to 443 once serving with TLS.
 const (
-	// TODO (next): Change this regex to match chosen UUID/GUID format.
-	idRegex = "[1-9][0-9]*"
 	port    = "8080"
+	idMatch = "[a-zA-Z0-9]+"
 )
 
 func main() {
+	worker := worker.NewWorker()
+	handler := api.NewHandler(worker)
+
 	router := mux.NewRouter()
 
-	router.HandleFunc("/jobs/run", worker.Run).Methods(http.MethodPost)
-	router.HandleFunc("/jobs/{id:"+idRegex+"}/status", worker.Status).Methods(http.MethodGet)
-	router.HandleFunc("/jobs/{id:"+idRegex+"}/out", worker.Out).Methods(http.MethodGet)
-	router.HandleFunc("/jobs/{id:"+idRegex+"}/kill", worker.Kill).Methods(http.MethodPut)
+	router.HandleFunc("/jobs/run", handler.PostJob).Methods(http.MethodPost)
+	router.HandleFunc("/jobs/{id:"+idMatch+"}/status", handler.GetJobStatus).Methods(http.MethodGet)
+	router.HandleFunc("/jobs/{id:"+idMatch+"}/out", handler.GetJobOutput).Methods(http.MethodGet)
+	router.HandleFunc("/jobs/{id:"+idMatch+"}/kill", handler.KillJob).Methods(http.MethodPut)
 
 	fmt.Println("Listening...")
 	// TODO (next): ListenAndServeTLS by using a pre-generated private key

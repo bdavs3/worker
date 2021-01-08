@@ -12,35 +12,34 @@ const (
 	storedHash     = "$2a$10$P7GoVlD0fEu14OWE76dGzude2NLw0pi05Gzar6rm1b.oD04lcvyaq"
 )
 
-// A UserAuthLayer authenticates/authorizes users by validating their credentials
-// and verifying that they are owner of any resource they are attempting to
-// access. It also enables users to be set as owner of a particular resource.
-type UserAuthLayer interface {
+// A SecurityLayer can perform security checks on an HTTP handler and set owner
+// relationships to id-represented resources.
+type SecurityLayer interface {
 	Secure(handler http.Handler) http.Handler
 	SetOwner(username, id string)
 }
 
-// DummyAuth implements the AuthLayer interface so that the API can be tested
-// independently.
+// DummyAuth implements the SecurityLayer interface so that the API can be
+// tested independently.
 type DummyAuth struct{}
 
 func (da *DummyAuth) Secure(handler http.Handler) http.Handler { return nil }
 func (da *DummyAuth) SetOwner(username, id string)             {}
 
-// Auth provides the ability to authenticate/authorize users and to set them
-// as owners of particular resources. Use NewAuth to create a new instance.
+// Auth enforces password validation and a resource-ownership check on client
+// requests. Use NewAuth to create a new instance.
 type Auth struct {
 	owners *ownershipTracker
 }
 
-// NewAuth returns an Auth layer with an empty ownership map.
+// NewAuth creates a new instance of the auth layer.
 func NewAuth() *Auth {
 	return &Auth{
 		owners: newOwnershipTracker(),
 	}
 }
 
-// Secure enforces user authentication and a resource ownership check on
+// Secure performs an authentication and resource-ownership check on
 // an HTTP Handler.
 func (a *Auth) Secure(handler http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -76,8 +75,8 @@ func validate(username, pw string) bool {
 	return false
 }
 
-// SetOwner designates the given user as the owner of the resource with the
-// given id.
+// SetOwner designates the given user as the owner of the resource with the given id.
 func (a *Auth) SetOwner(username, id string) {
+	// TODO (out of scope): Owner relationships would normally be tracked in a database.
 	a.owners.setOwner(username, id)
 }

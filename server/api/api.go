@@ -15,11 +15,11 @@ import (
 // Handler is an HTTP handler that manages processes on behalf of clients.
 type Handler struct {
 	Worker worker.JobWorker
-	Auth   auth.UserAuthLayer
+	Auth   auth.SecurityLayer
 }
 
 // NewHandler initalizes a Handler with the given JobWorker and UserAuthLayer.
-func NewHandler(worker worker.JobWorker, auth auth.UserAuthLayer) *Handler {
+func NewHandler(worker worker.JobWorker, auth auth.SecurityLayer) *Handler {
 	return &Handler{
 		Worker: worker,
 		Auth:   auth,

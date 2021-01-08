@@ -180,7 +180,10 @@ func (c *Client) makeRequestWithAuth(method, endpoint string, requestBody io.Rea
 	}
 
 	var response *api.Response
-	json.Unmarshal(body, &response)
+	err = json.Unmarshal(body, &response)
+	if err != nil {
+		return nil, err
+	}
 
 	return response, nil
 }

@@ -83,12 +83,17 @@ func (w *Worker) execJob(id string, job Job) {
 
 	cmd := exec.CommandContext(cmdctx, job.Command, job.Args...)
 
-	cmd.Stdout, _ = w.log.getOutputBuffer(id)
+	outputBuffer, err := w.log.getOutputBuffer(id)
+	if err != nil {
+		w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err))
+	}
+
+	cmd.Stdout = outputBuffer
 
 	// Direct cmd.Stderr to cmd.Stdout to interleave them as expected by command order.
 	cmd.Stderr = cmd.Stdout
 
-	err := cmd.Start()
+	err = cmd.Start()
 	if err != nil {
 		w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err))
 		return

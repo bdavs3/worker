@@ -1,11 +1,12 @@
 # Worker
 
-`worker` is a command-line service for running arbitrary Linux processes.
+`worker` is a command-line service for running arbitrary Linux processes. The Linux binaries can be found in the `bin` directory.
 
 To use it, first run the server:
 
 ```sh
-./server
+$ ./server # If the server does not persist, run it using 'sudo'.
+Listening...
 ```
 
 Then, in a separate terminal instance, set environment variables for the pre-determined username and password:

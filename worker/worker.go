@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"strings"
 	"sync"
 	"time"
 
@@ -148,7 +149,7 @@ func (w *Worker) Out(id string) (string, error) {
 		return "", err
 	}
 
-	return out.String(), nil
+	return strings.TrimSuffix(out.String(), "\n"), nil
 }
 
 // Kill terminates the process represented by the given id.

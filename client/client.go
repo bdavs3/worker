@@ -24,7 +24,7 @@ import (
 
 const (
 	crtFile = "../worker.crt"
-	host    = "https://localhost:443"
+	host    = "https://localhost"
 	timeout = 5 * time.Second
 )
 
@@ -38,13 +38,18 @@ type Client struct {
 // NewClient creates a new Client instance that is configured to use
 // a pre-generated certificate for communication over HTTPS.
 func NewClient() (*Client, error) {
+	port := os.Getenv("port")
+	if len(port) == 0 {
+		port = "443"
+	}
+
 	rootCAs, err := generateCertPool(crtFile)
 	if err != nil {
 		return nil, err
 	}
 
 	client := &Client{
-		BaseURL: host,
+		BaseURL: host + ":" + port,
 		HTTPClient: &http.Client{
 			Timeout: timeout,
 			Transport: &http.Transport{
@@ -66,9 +71,12 @@ func generateCertPool(crtFile string) (*x509.CertPool, error) {
 	}
 
 	caCertPool := x509.NewCertPool()
-	caCertPool.AppendCertsFromPEM(caCert)
+	ok := caCertPool.AppendCertsFromPEM(caCert)
+	if !ok {
+		return nil, errors.New("failed to generate cert pool")
+	}
 
-	return caCertPool, err
+	return caCertPool, nil
 }
 
 // PostJob passes a Linux process to the worker library for execution.

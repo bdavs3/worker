@@ -1,6 +1,8 @@
 package auth
 
-import "sync"
+import (
+	"sync"
+)
 
 type ownershipTracker struct {
 	// The empty struct allows the inner map to be treated like a set.
@@ -28,7 +30,12 @@ func (ot *ownershipTracker) isOwner(username, id string) bool {
 	ot.mu.RLock()
 	defer ot.mu.RUnlock()
 
-	_, ok := ot.ownerships[username][id]
+	user, ok := ot.ownerships[username]
+	if !ok { // User has not been registered as owner of any resource.
+		return false
+	}
+
+	_, ok = user[id]
 
 	return ok
 }

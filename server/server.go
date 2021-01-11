@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"os"
 
 	"github.com/bdavs3/worker/server/api"
 	"github.com/bdavs3/worker/server/auth"
@@ -12,7 +13,6 @@ import (
 )
 
 const (
-	port    = "443"
 	crtFile = "../worker.crt"
 	keyFile = "../worker.key"
 	idMatch = "[a-zA-Z0-9]+"
@@ -28,17 +28,26 @@ const (
 // - Avoid data copies, but don't overdo it.
 
 func main() {
+	port := os.Getenv("port")
+	if len(port) == 0 {
+		port = "443"
+	}
+
 	worker := worker.NewWorker()
 	auth := auth.NewAuth()
 	handler := api.NewHandler(worker, auth)
 
 	router := mux.NewRouter()
-	router.Use(auth.Secure)
+	router.Use(auth.Authenticate)
+
+	// A subrouter is used to avoid extraneous authorization checks.
+	sub := router.Methods(http.MethodGet, http.MethodPut).Subrouter()
+	sub.Use(auth.Authorize)
 
 	router.HandleFunc("/jobs/run", handler.PostJob).Methods(http.MethodPost)
-	router.HandleFunc("/jobs/{id:"+idMatch+"}/status", handler.GetJobStatus).Methods(http.MethodGet)
-	router.HandleFunc("/jobs/{id:"+idMatch+"}/out", handler.GetJobOutput).Methods(http.MethodGet)
-	router.HandleFunc("/jobs/{id:"+idMatch+"}/kill", handler.KillJob).Methods(http.MethodPut)
+	sub.HandleFunc("/jobs/{id:"+idMatch+"}/status", handler.GetJobStatus).Methods(http.MethodGet)
+	sub.HandleFunc("/jobs/{id:"+idMatch+"}/out", handler.GetJobOutput).Methods(http.MethodGet)
+	sub.HandleFunc("/jobs/{id:"+idMatch+"}/kill", handler.KillJob).Methods(http.MethodPut)
 
 	fmt.Println("Listening...")
 	http.ListenAndServeTLS(":"+port, crtFile, keyFile, router)

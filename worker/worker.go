@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"strings"
 	"sync"
 	"time"
 
@@ -144,12 +143,18 @@ func (w *Worker) Status(id string) (string, error) {
 
 // Out returns the output of the process represented by the given id.
 func (w *Worker) Out(id string) (string, error) {
-	out, err := w.log.getOutputBuffer(id)
+	buf, err := w.log.getOutputBuffer(id)
 	if err != nil {
 		return "", err
 	}
 
-	return strings.TrimSuffix(out.String(), "\n"), nil
+	out := buf.String()
+
+	if len(out) > 0 && out[len(out)-1:] != "\n" {
+		out = out + "\n"
+	}
+
+	return out, nil
 }
 
 // Kill terminates the process represented by the given id.

@@ -123,7 +123,7 @@ func (ws *workerService) out(ctx *cli.Context) error {
 		return err
 	}
 
-	fmt.Println(responseBody)
+	fmt.Print(responseBody)
 
 	return nil
 }

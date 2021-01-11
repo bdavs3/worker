@@ -49,7 +49,7 @@ func validate(username, pw string) bool {
 	// TODO (out of scope): Store user credentials in a secure database and
 	// validate request Authorization headers against them. It is critical
 	// that passwords are hashed before storage in the database.
-	if username == storedUsername || username == "test" {
+	if username == storedUsername {
 		err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(pw))
 		return err == nil
 	}

@@ -25,7 +25,7 @@ type Handler struct {
 	Auth   auth.SecurityLayer
 }
 
-// NewHandler initalizes a Handler with the given JobWorker and UserAuthLayer.
+// NewHandler initalizes a Handler with the given JobWorker and SecurityLayer.
 func NewHandler(worker worker.JobWorker, auth auth.SecurityLayer) *Handler {
 	return &Handler{
 		Worker: worker,

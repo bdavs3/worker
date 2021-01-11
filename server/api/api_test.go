@@ -12,11 +12,10 @@ import (
 )
 
 func TestAPIRequest(t *testing.T) {
-	// Using a DummyWorker allows the API to be tested without entangling it
-	// in the functionality of the worker library.
+	// Passing dummy parameters to the handler allows the API to be tested independently.
 	dummyWorker := &worker.DummyWorker{}
-	auth := &auth.DummyAuth{}
-	handler := NewHandler(dummyWorker, auth)
+	dummyAuth := &auth.DummyAuth{}
+	handler := NewHandler(dummyWorker, dummyAuth)
 
 	var tests = []struct {
 		comment string

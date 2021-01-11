@@ -41,8 +41,7 @@ func NewWorker() *Worker {
 	}
 }
 
-// DummyWorker implements the JobWorker interface so that the API can be tested
-// independently.
+// DummyWorker is a JobWorker intended only for testing dependent functions.
 type DummyWorker struct{}
 
 func (dw *DummyWorker) Run(job Job) string               { return "" }
@@ -83,12 +82,12 @@ func (w *Worker) execJob(id string, job Job) {
 
 	cmd := exec.CommandContext(cmdctx, job.Command, job.Args...)
 
-	outputBuffer, err := w.log.getOutputBuffer(id)
+	buf, err := w.log.getOutputBuffer(id)
 	if err != nil {
 		w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err))
 	}
 
-	cmd.Stdout = outputBuffer
+	cmd.Stdout = buf
 
 	// Direct cmd.Stderr to cmd.Stdout to interleave them as expected by command order.
 	cmd.Stderr = cmd.Stdout

@@ -20,7 +20,7 @@ func main() {
 
 	app := &cli.App{
 		Name:  "worker",
-		Usage: "run arbitrary Linux jobs",
+		Usage: "run arbitrary Linux processes",
 		Commands: []*cli.Command{
 			// By default, the CLI includes a "help" command that displays app
 			// info and command usage.

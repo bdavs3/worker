@@ -19,8 +19,7 @@ type SecurityLayer interface {
 	SetOwner(username, id string)
 }
 
-// DummyAuth implements the SecurityLayer interface so that the API can be
-// tested independently.
+// DummyAuth is a SecurityLayer intended only for testing dependent functions.
 type DummyAuth struct{}
 
 func (da *DummyAuth) Secure(handler http.Handler) http.Handler { return nil }

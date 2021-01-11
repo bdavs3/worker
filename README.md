@@ -1,6 +1,6 @@
 # Worker
 
-`worker` is a command-line service for running arbitrary Linux processes. The Linux binaries can be found in the `bin` directory.
+`worker` is a command-line service for running arbitrary Linux processes.
 
 To use it, first run the server:
 

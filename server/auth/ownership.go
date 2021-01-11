@@ -3,9 +3,9 @@ package auth
 import "sync"
 
 type ownershipTracker struct {
-	// The inner map employs the empty struct so it may be treated like a set.
+	// The empty struct allows the inner map to be treated like a set.
 	ownerships map[string]map[string]struct{}
-	mu         sync.Mutex
+	mu         sync.RWMutex
 }
 
 func newOwnershipTracker() *ownershipTracker {
@@ -25,8 +25,8 @@ func (ot *ownershipTracker) setOwner(username, id string) {
 }
 
 func (ot *ownershipTracker) isOwner(username, id string) bool {
-	ot.mu.Lock()
-	defer ot.mu.Unlock()
+	ot.mu.RLock()
+	defer ot.mu.RUnlock()
 
 	_, ok := ot.ownerships[username][id]
 

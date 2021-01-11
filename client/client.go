@@ -35,7 +35,8 @@ type Client struct {
 	HTTPClient *http.Client
 }
 
-// NewClient creates a new Client instance.
+// NewClient creates a new Client instance that is configured to use
+// a pre-generated certificate for communication over HTTPS.
 func NewClient() (*Client, error) {
 	rootCAs, err := generateCertPool(crtFile)
 	if err != nil {
@@ -57,7 +58,7 @@ func NewClient() (*Client, error) {
 	return client, nil
 }
 
-// generaeteCertPool returns a CertPool containing the given certificate.
+// generateCertPool returns a CertPool containing the given certificate.
 func generateCertPool(crtFile string) (*x509.CertPool, error) {
 	caCert, err := ioutil.ReadFile(crtFile)
 	if err != nil {

@@ -18,8 +18,14 @@ const (
 	idMatch = "[a-zA-Z0-9]+"
 )
 
-// TODO (out of scope): To ensure high availability, use a load balancer to distribute
-// network traffic.
+// TODO (out of scope): In the interest of high availability, use a load balancer to
+// distribute network traffic.
+
+// TODO (out of scope): In the interest of high performance, start optimizing in the
+// following ways...
+// - Reduce lock contention using atomic operations or other data structures.
+// - Pre-allocate memory where possible.
+// - Avoid data copies, but don't overdo it.
 
 func main() {
 	worker := worker.NewWorker()

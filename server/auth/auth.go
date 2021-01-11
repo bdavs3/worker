@@ -49,6 +49,8 @@ func (a *Auth) Secure(handler http.Handler) http.Handler {
 			return
 		}
 
+		// MethodPost infers that the user is adding some new data, thus ownership
+		// verification is unnecessary.
 		if r.Method != http.MethodPost {
 			id := mux.Vars(r)["id"]
 			if !a.owners.isOwner(username, id) {

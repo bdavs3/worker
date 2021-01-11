@@ -57,10 +57,14 @@ func main() {
 	}
 }
 
+// A workerService parses CLI data and passes it to a Client for requests. Use
+// newWorkerService to create an instance.
 type workerService struct {
 	Client *client.Client
 }
 
+// newWorkerService creates a workerService instance containing a Client with which it
+// exchanges data.
 func newWorkerService() (*workerService, error) {
 	client, err := client.NewClient()
 	if err != nil {

@@ -18,6 +18,9 @@ const (
 	idMatch = "[a-zA-Z0-9]+"
 )
 
+// TODO (out of scope): To ensure high availability, use a load balancer to distribute
+// network traffic.
+
 func main() {
 	worker := worker.NewWorker()
 	auth := auth.NewAuth()

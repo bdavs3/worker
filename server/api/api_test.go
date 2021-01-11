@@ -14,8 +14,8 @@ import (
 func TestAPIRequest(t *testing.T) {
 	// Passing dummy parameters to the handler allows the API to be tested independently.
 	dummyWorker := &worker.DummyWorker{}
-	dummyAuth := &auth.DummyAuth{}
-	handler := NewHandler(dummyWorker, dummyAuth)
+	dummyOwners := &auth.DummyOwners{}
+	handler := NewHandler(dummyWorker, dummyOwners)
 
 	var tests = []struct {
 		comment string

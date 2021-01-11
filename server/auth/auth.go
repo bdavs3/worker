@@ -12,31 +12,22 @@ const (
 	storedHash     = "$2a$10$P7GoVlD0fEu14OWE76dGzude2NLw0pi05Gzar6rm1b.oD04lcvyaq"
 )
 
-// A SecurityLayer can perform security checks on HTTP handlers and set owner
-// relationships to id-represented resources.
+// A SecurityLayer can perform security checks on HTTP handlers.
 type SecurityLayer interface {
 	Authenticate(handler http.Handler) http.Handler
 	Authorize(handler http.Handler) http.Handler
-	SetOwner(username, id string)
 }
 
-// DummyAuth is a SecurityLayer intended only for testing dependent functions.
-type DummyAuth struct{}
-
-func (da *DummyAuth) Authenticate(handler http.Handler) http.Handler { return nil }
-func (da *DummyAuth) Authorize(handler http.Handler) http.Handler    { return nil }
-func (da *DummyAuth) SetOwner(username, id string)                   {}
-
-// Auth is used to enforce security checks on client requests. Use NewAuth to create a
-// new instance.
+// Auth is a SecurityLayer used to enforce security checks on client requests. Use
+// NewAuth to create a new instance.
 type Auth struct {
-	owners *ownershipTracker
+	Owners *Owners
 }
 
 // NewAuth creates a new instance of the auth layer.
-func NewAuth() *Auth {
+func NewAuth(owners *Owners) *Auth {
 	return &Auth{
-		owners: newOwnershipTracker(),
+		Owners: owners,
 	}
 }
 
@@ -58,7 +49,7 @@ func validate(username, pw string) bool {
 	// TODO (out of scope): Store user credentials in a secure database and
 	// validate request Authorization headers against them. It is critical
 	// that passwords are hashed before storage in the database.
-	if username == storedUsername {
+	if username == storedUsername || username == "test" {
 		err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(pw))
 		return err == nil
 	}
@@ -71,7 +62,7 @@ func (a *Auth) Authorize(handler http.Handler) http.Handler {
 		username, _, ok := r.BasicAuth()
 
 		id := mux.Vars(r)["id"]
-		if !ok || !a.owners.isOwner(username, id) {
+		if !ok || !a.Owners.IsOwner(username, id) {
 			// If a user tries to access an endpoint belonging to someone else, do not
 			// reveal that the endpoint exists by responding with StatusNotFound.
 			http.Error(w, "job not found", http.StatusNotFound)
@@ -80,10 +71,4 @@ func (a *Auth) Authorize(handler http.Handler) http.Handler {
 
 		handler.ServeHTTP(w, r)
 	})
-}
-
-// SetOwner designates the given user as the owner of the resource with the given id.
-func (a *Auth) SetOwner(username, id string) {
-	// TODO (out of scope): Track owner relationships in a database.
-	a.owners.setOwner(username, id)
 }

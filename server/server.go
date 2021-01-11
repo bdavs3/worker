@@ -12,12 +12,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-const (
-	crtFile = "../worker.crt"
-	keyFile = "../worker.key"
-	idMatch = "[a-zA-Z0-9]+"
-)
-
 // TODO (out of scope): In the interest of high availability, use a load balancer to
 // distribute network traffic.
 
@@ -27,6 +21,12 @@ const (
 // - Pre-allocate memory where possible.
 // - Avoid data copies, but don't overdo it.
 
+const (
+	crtFile = "../worker.crt"
+	keyFile = "../worker.key"
+	idMatch = "[a-zA-Z0-9]+"
+)
+
 func main() {
 	port := os.Getenv("port")
 	if len(port) == 0 {
@@ -34,8 +34,9 @@ func main() {
 	}
 
 	worker := worker.NewWorker()
-	auth := auth.NewAuth()
-	handler := api.NewHandler(worker, auth)
+	owners := auth.NewOwners()
+	auth := auth.NewAuth(owners)
+	handler := api.NewHandler(worker, owners)
 
 	router := mux.NewRouter()
 	router.Use(auth.Authenticate)

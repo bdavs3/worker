@@ -4,19 +4,35 @@ import (
 	"sync"
 )
 
-type ownershipTracker struct {
+// OwnershipRecorder assists in request authorization by tracking resource ownership.
+type OwnershipRecorder interface {
+	SetOwner(username, id string)
+	IsOwner(username, id string) bool
+}
+
+// Owners is the OwnershipRecorder used by the auth layer. Use NewOwners to create a
+// new instance.
+type Owners struct {
 	// The empty struct allows the inner map to be treated like a set.
 	ownerships map[string]map[string]struct{}
 	mu         sync.RWMutex
 }
 
-func newOwnershipTracker() *ownershipTracker {
-	return &ownershipTracker{
+// NewOwners creates a new instance of the owner log.
+func NewOwners() *Owners {
+	return &Owners{
 		ownerships: make(map[string]map[string]struct{}),
 	}
 }
 
-func (ot *ownershipTracker) setOwner(username, id string) {
+// DummyOwners is an OwnershipRecorder intended only for testing dependent functions.
+type DummyOwners struct{}
+
+func (do *DummyOwners) SetOwner(username, id string)     {}
+func (do *DummyOwners) IsOwner(username, id string) bool { return false }
+
+// SetOwner registers the given user as the owner of the resource with the given id.
+func (ot *Owners) SetOwner(username, id string) {
 	ot.mu.Lock()
 	defer ot.mu.Unlock()
 
@@ -26,7 +42,9 @@ func (ot *ownershipTracker) setOwner(username, id string) {
 	ot.ownerships[username][id] = struct{}{}
 }
 
-func (ot *ownershipTracker) isOwner(username, id string) bool {
+// IsOwner returns true only if the given user is the registered owner of the resource
+// represented by the given id.
+func (ot *Owners) IsOwner(username, id string) bool {
 	ot.mu.RLock()
 	defer ot.mu.RUnlock()
 

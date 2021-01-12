@@ -117,7 +117,7 @@ func (ws *workerService) status(ctx *cli.Context) error {
 
 func (ws *workerService) out(ctx *cli.Context) error {
 	if ctx.NArg() != 1 {
-		return errors.New("no job ID supplied to 'out' command")
+		return errors.New("no job id supplied to 'out' command")
 	}
 
 	id := ctx.Args().Get(0)
@@ -134,7 +134,7 @@ func (ws *workerService) out(ctx *cli.Context) error {
 
 func (ws *workerService) kill(ctx *cli.Context) error {
 	if ctx.NArg() != 1 {
-		return errors.New("no job ID supplied to 'kill' command")
+		return errors.New("no job id supplied to 'kill' command")
 	}
 
 	id := ctx.Args().Get(0)

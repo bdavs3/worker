@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/bdavs3/worker/server/auth"
 	"github.com/bdavs3/worker/worker"
 
 	"github.com/gorilla/mux"
@@ -21,17 +22,20 @@ type Response struct {
 // Handler is an HTTP handler that manages processes on behalf of clients.
 type Handler struct {
 	Worker worker.JobWorker
+	Owners auth.OwnershipRecorder
 }
 
-// NewHandler creates a new Handler instance with the given JobWorker.
-func NewHandler(worker worker.JobWorker) *Handler {
+// NewHandler initalizes a Handler with the given JobWorker and OwnershipRecorder.
+func NewHandler(worker worker.JobWorker, owners auth.OwnershipRecorder) *Handler {
 	return &Handler{
 		Worker: worker,
+		Owners: owners,
 	}
 }
 
-// PostJob initiates the worker's execution of the process contained in the
-// request and if successful, responds with the id assigned to that process.
+// PostJob initiates the worker's execution of the process contained in the request
+// and if successful, responds with the id assigned to that process. It also registers
+// ownership of the new resource.
 func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 	reqBody, err := ioutil.ReadAll(r.Body)
 	if err != nil {
@@ -47,6 +51,9 @@ func (h *Handler) PostJob(w http.ResponseWriter, r *http.Request) {
 	}
 
 	id := h.Worker.Run(job)
+
+	username, _, _ := r.BasicAuth()
+	h.Owners.SetOwner(username, id)
 
 	response := &Response{ID: id}
 

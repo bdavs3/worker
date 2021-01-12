@@ -41,15 +41,6 @@ func NewWorker() *Worker {
 	}
 }
 
-// DummyWorker implements the JobWorker interface so that the API can be tested
-// independently.
-type DummyWorker struct{}
-
-func (dw *DummyWorker) Run(job Job) string               { return "" }
-func (dw *DummyWorker) Status(id string) (string, error) { return "", nil }
-func (dw *DummyWorker) Out(id string) (string, error)    { return "", nil }
-func (dw *DummyWorker) Kill(id string) error             { return nil }
-
 // Job represents a Linux process to be handled by the worker library.
 type Job struct {
 	Command string   `json:"command"`
@@ -83,12 +74,12 @@ func (w *Worker) execJob(id string, job Job) {
 
 	cmd := exec.CommandContext(cmdctx, job.Command, job.Args...)
 
-	outputBuffer, err := w.log.getOutputBuffer(id)
+	buf, err := w.log.getOutputBuffer(id)
 	if err != nil {
 		w.log.setStatus(id, fmt.Sprintf("%s - %s", statusError, err))
 	}
 
-	cmd.Stdout = outputBuffer
+	cmd.Stdout = buf
 
 	// Direct cmd.Stderr to cmd.Stdout to interleave them as expected by command order.
 	cmd.Stderr = cmd.Stdout
@@ -143,12 +134,18 @@ func (w *Worker) Status(id string) (string, error) {
 
 // Out returns the output of the process represented by the given id.
 func (w *Worker) Out(id string) (string, error) {
-	out, err := w.log.getOutputBuffer(id)
+	buf, err := w.log.getOutputBuffer(id)
 	if err != nil {
 		return "", err
 	}
 
-	return out.String(), nil
+	out := buf.String()
+
+	if len(out) > 0 && out[len(out)-1:] != "\n" {
+		out = out + "\n"
+	}
+
+	return out, nil
 }
 
 // Kill terminates the process represented by the given id.

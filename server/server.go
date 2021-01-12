@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 
 	"github.com/bdavs3/worker/server/api"
 	"github.com/bdavs3/worker/server/auth"
@@ -11,25 +13,47 @@ import (
 	"github.com/gorilla/mux"
 )
 
-// TODO (next): Change to 443 once serving with TLS.
+// TODO (out of scope): In the interest of high availability, use a load balancer to
+// distribute network traffic.
+
+// TODO (out of scope): In the interest of high performance, start optimizing in the
+// following ways...
+// - Reduce lock contention using atomic operations or other data structures.
+// - Pre-allocate memory where possible.
+// - Avoid data copies, but don't overdo it.
+
 const (
-	port    = "8080"
+	crtFile = "../worker.crt"
+	keyFile = "../worker.key"
 	idMatch = "[a-zA-Z0-9]+"
 )
 
 func main() {
+	port := os.Getenv("port")
+	if len(port) == 0 {
+		port = "443"
+	}
+
 	worker := worker.NewWorker()
-	handler := api.NewHandler(worker)
+	owners := auth.NewOwners()
+	auth := auth.NewAuth(owners)
+	handler := api.NewHandler(worker, owners)
 
 	router := mux.NewRouter()
+	router.Use(auth.Authenticate)
+
+	// A subrouter is used to avoid extraneous authorization checks.
+	sub := router.Methods(http.MethodGet, http.MethodPut).Subrouter()
+	sub.Use(auth.Authorize)
 
 	router.HandleFunc("/jobs/run", handler.PostJob).Methods(http.MethodPost)
-	router.HandleFunc("/jobs/{id:"+idMatch+"}/status", handler.GetJobStatus).Methods(http.MethodGet)
-	router.HandleFunc("/jobs/{id:"+idMatch+"}/out", handler.GetJobOutput).Methods(http.MethodGet)
-	router.HandleFunc("/jobs/{id:"+idMatch+"}/kill", handler.KillJob).Methods(http.MethodPut)
+	sub.HandleFunc("/jobs/{id:"+idMatch+"}/status", handler.GetJobStatus).Methods(http.MethodGet)
+	sub.HandleFunc("/jobs/{id:"+idMatch+"}/out", handler.GetJobOutput).Methods(http.MethodGet)
+	sub.HandleFunc("/jobs/{id:"+idMatch+"}/kill", handler.KillJob).Methods(http.MethodPut)
 
 	fmt.Println("Listening...")
-	// TODO (next): ListenAndServeTLS by using a pre-generated private key
-	// and self-signed certificate located inside the repository.
-	http.ListenAndServe(":"+port, auth.Secure(router))
+	err := http.ListenAndServeTLS(":"+port, crtFile, keyFile, router)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

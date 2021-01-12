@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 
@@ -51,5 +52,8 @@ func main() {
 	sub.HandleFunc("/jobs/{id:"+idMatch+"}/kill", handler.KillJob).Methods(http.MethodPut)
 
 	fmt.Println("Listening...")
-	http.ListenAndServeTLS(":"+port, crtFile, keyFile, router)
+	err := http.ListenAndServeTLS(":"+port, crtFile, keyFile, router)
+	if err != nil {
+		log.Fatal(err)
+	}
 }

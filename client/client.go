@@ -23,9 +23,10 @@ import (
 // need to authenticate on each subsequent request.
 
 const (
-	crtFile = "../worker.crt"
-	host    = "https://localhost"
-	timeout = 5 * time.Second
+	crtFile     = "../worker.crt"
+	host        = "https://localhost"
+	timeout     = 5 * time.Second
+	errSecurity = "response contains incorrect job id - please discontinue using the service"
 )
 
 // Client is an HTTP client for making requests to control and assess Linux
@@ -111,7 +112,7 @@ func (c *Client) GetJobStatus(id string) (string, error) {
 		return "", err
 	}
 	if response.ID != id {
-		return "", errors.New("response contains incorrect job id")
+		return "", errors.New(errSecurity)
 	}
 
 	return response.Status, nil
@@ -129,7 +130,7 @@ func (c *Client) GetJobOutput(id string) (string, error) {
 		return "", err
 	}
 	if response.ID != id {
-		return "", errors.New("response contains incorrect job id")
+		return "", errors.New(errSecurity)
 	}
 
 	return response.Output, nil
@@ -147,7 +148,7 @@ func (c *Client) KillJob(id string) (string, error) {
 		return "", err
 	}
 	if response.ID != id {
-		return "", errors.New("response contains incorrect job id")
+		return "", errors.New(errSecurity)
 	}
 
 	return response.Status, nil

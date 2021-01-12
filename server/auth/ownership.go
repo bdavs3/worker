@@ -25,12 +25,6 @@ func NewOwners() *Owners {
 	}
 }
 
-// DummyOwners is an OwnershipRecorder intended only for testing dependent functions.
-type DummyOwners struct{}
-
-func (do *DummyOwners) SetOwner(username, id string)     {}
-func (do *DummyOwners) IsOwner(username, id string) bool { return false }
-
 // SetOwner registers the given user as the owner of the resource with the given id.
 func (ot *Owners) SetOwner(username, id string) {
 	ot.mu.Lock()

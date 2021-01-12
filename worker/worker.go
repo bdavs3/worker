@@ -41,14 +41,6 @@ func NewWorker() *Worker {
 	}
 }
 
-// DummyWorker is a JobWorker intended only for testing dependent functions.
-type DummyWorker struct{}
-
-func (dw *DummyWorker) Run(job Job) string               { return "" }
-func (dw *DummyWorker) Status(id string) (string, error) { return "", nil }
-func (dw *DummyWorker) Out(id string) (string, error)    { return "", nil }
-func (dw *DummyWorker) Kill(id string) error             { return nil }
-
 // Job represents a Linux process to be handled by the worker library.
 type Job struct {
 	Command string   `json:"command"`

@@ -79,7 +79,8 @@ func generateCertPool(crtFile string) (*x509.CertPool, error) {
 	return caCertPool, nil
 }
 
-// PostJob passes a Linux process to the worker library for execution.
+// PostJob passes a Linux process to the worker library for execution and returns
+// the id assigned to that process.
 func (c *Client) PostJob(job worker.Job) (string, error) {
 	requestBody, err := json.Marshal(job)
 	if err != nil {
@@ -98,7 +99,8 @@ func (c *Client) PostJob(job worker.Job) (string, error) {
 	return response.ID, nil
 }
 
-// GetJobStatus queries the status of a process being handled by the worker library.
+// GetJobStatus queries the status of a process being handled by the worker library
+// and returns it as a string.
 func (c *Client) GetJobStatus(id string) (string, error) {
 	response, err := c.makeRequestWithAuth(
 		http.MethodGet,
@@ -115,7 +117,8 @@ func (c *Client) GetJobStatus(id string) (string, error) {
 	return response.Status, nil
 }
 
-// GetJobOutput queries the output of a process being handled by the worker library.
+// GetJobOutput queries the output of a process being handled by the worker library
+// and returns it as a string.
 func (c *Client) GetJobOutput(id string) (string, error) {
 	response, err := c.makeRequestWithAuth(
 		http.MethodGet,
@@ -132,7 +135,8 @@ func (c *Client) GetJobOutput(id string) (string, error) {
 	return response.Output, nil
 }
 
-// KillJob terminates a process being handled by the worker library.
+// KillJob terminates a process being handled by the worker library and returns
+// the result as a string.
 func (c *Client) KillJob(id string) (string, error) {
 	response, err := c.makeRequestWithAuth(
 		http.MethodPut,

@@ -2,7 +2,7 @@
 
 `worker` is a command-line service for running arbitrary Linux processes.
 
-I completed this project as the final stage of the hiring process for a backend engineering role at [Teleport](https://goteleport.com). The [challenge spec](https://github.com/bdavs3/worker/challenge.md) is in the repository if you'd like more details. Before this project, I had zero Golang programming experience and my knowledge of backend was limited. I was ultimately successfully in fulfilling the L1 requirements, but was unfortunately not offered the job. I did, however, learn that I really like programming in Go and building backend systems.
+I completed this project as the final stage of the hiring process for a backend engineering role at [Teleport](https://goteleport.com). The [challenge spec](https://github.com/bdavs3/worker/blob/master/Challenge.pdf) is in the repository if you'd like more details. Before this project, I had zero Golang programming experience and my knowledge of backend was limited. I was ultimately successfully in fulfilling the L1 requirements, but was unfortunately not offered the job. I did, however, learn that I really like programming in Go and building backend systems.
 
 As I am now going to continue pursuing similar employment opportunities, this repository serves to demonstrate the progress I made in my first month of working in this subfield of computer science. Since my interview team at Teleport was constantly in touch to provide direction and identify shortcomings in my code, you can also check out the closed [pull requests](https://github.com/bdavs3/worker/pulls?q=is%3Apr+is%3Aclosed) to understand how I approach problem-solving in a remote, open-source environment.
 

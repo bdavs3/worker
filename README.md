@@ -6,10 +6,12 @@ I completed this project as the final stage of the hiring process for a backend 
 
 As I am now going to continue pursuing similar employment opportunities, this repository serves to demonstrate the progress I made in my first month of working in this subfield of computer science. Since my interview team at Teleport was constantly in touch to provide direction and identify shortcomings in my code, you can also check out the closed [pull requests](https://github.com/bdavs3/worker/pulls?q=is%3Apr+is%3Aclosed) to understand how I approach problem-solving in a remote, open-source environment.
 
-To use the service, first make the builds, which will be placed in a new `bin` directory:
+To use the service, first make the builds, which will be placed in a new `bin` directory. Make sure you build for your operating system:
 
 ```sh
-$ make build
+$ make windows
+$ make mac
+$ make linux
 ```
 
 Once the builds are complete, `cd` into the `bin` directory.
